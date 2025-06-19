@@ -1,121 +1,38 @@
-html,
-body {
-  padding: 0;
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
-    Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-/*
-======================================================
-*/
-
-.dotsContainer {
-  width: 60px;
-  height: 25px;
-  background: #f2f2f2;
-  border-radius: 25px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-#dot1,
-#dot2,
-#dot3 {
-  width: 7px;
-  height: 7px;
-  background: #cacaca;
-  border-radius: 50%;
-  margin: 3px;
-  transition: all 0.5s ease-in-out;
-  animation: typing 1s infinite;
-}
-
-#dot1 {
-  animation-delay: 1s;
-}
-
-#dot2 {
-  animation-delay: 0.5s;
-}
-
-#dot3 {
-  animation-delay: 0.8s;
-}
-
-@keyframes typing {
-  0% {
-    transform: translateY(0);
-    transition: all 0.5s ease-in-out;
-  }
-
-  50% {
-    transform: translateY(-5px);
-    transition: all 0.5s ease-in-out;
-  }
-
-  100% {
-    transform: translateY(0);
-    transition: all 0.5s ease-in-out;
-  }
-}
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: var(--font-body), serif;
-}
-
 @layer base {
   :root {
-    --background: 195 27% 93%; /* #E8F0F2 */
-    --foreground: 200 15% 25%; /* Darker gray for text on light blue */
-    --card: 195 27% 98%; /* Slightly lighter than background for cards */
+    --background: 195 27% 93%;
+    --foreground: 200 15% 25%;
+    --card: 195 27% 98%;
     --card-foreground: 200 15% 25%;
     --popover: 195 27% 98%;
     --popover-foreground: 200 15% 25%;
-    --primary: 196 27% 58%; /* #79A3B1 */
-    --primary-foreground: 0 0% 100%; /* White text on primary */
-    --secondary: 196 20% 75%; /* Lighter shade of primary */
+    --primary: 196 27% 58%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 196 20% 75%;
     --secondary-foreground: 200 15% 25%;
     --muted: 196 15% 85%;
     --muted-foreground: 196 10% 45%;
-    --accent: 270 18% 64%; /* #977FAF */
-    --accent-foreground: 0 0% 100%; /* White text on accent */
-    --destructive: 0 72% 51%; /* Default destructive red */
+    --accent: 270 18% 64%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
     --border: 196 20% 80%;
     --input: 196 20% 88%;
-    --ring: 196 27% 58%; /* Primary color for rings */
-    --chart-1: 196 27% 58%;
-    --chart-2: 270 18% 64%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --ring: 196 27% 58%;
     --radius: 0.5rem;
-    --sidebar-background: 195 27% 90%; /* Slightly darker for sidebar */
-    --sidebar-foreground: 200 15% 20%;
-    --sidebar-primary: 196 27% 58%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 270 18% 64%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 196 20% 75%;
-    --sidebar-ring: 196 27% 58%;
+
+    --font-sans: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
+      Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+    --font-body: var(--font-sans);
+    --font-headline: var(--font-sans);
   }
+
   .dark {
-    --background: 200 15% 10%; /* Dark blue-gray */
+    --background: 200 15% 10%;
     --foreground: 195 20% 90%;
     --card: 200 15% 15%;
     --card-foreground: 195 20% 90%;
@@ -134,16 +51,6 @@ body {
     --border: 196 20% 20%;
     --input: 196 20% 25%;
     --ring: 196 27% 58%;
-    --chart-1: 196 27% 58%;
-    --chart-2: 270 18% 64%;
-    --sidebar-background: 200 15% 12%;
-    --sidebar-foreground: 195 20% 85%;
-    --sidebar-primary: 196 27% 58%;
-    --sidebar-primary-foreground: 200 15% 10%;
-    --sidebar-accent: 270 18% 64%;
-    --sidebar-accent-foreground: 200 15% 10%;
-    --sidebar-border: 196 20% 20%;
-    --sidebar-ring: 196 27% 58%;
   }
 }
 
@@ -151,16 +58,83 @@ body {
   * {
     @apply border-border;
   }
+
+  html,
   body {
-    @apply bg-background text-foreground;
-    @apply font-body;
+    @apply p-0 m-0;
   }
+
+  body {
+    @apply bg-background text-foreground antialiased min-h-screen;
+    font-family: var(--font-body);
+  }
+
   h1,
   h2,
   h3,
   h4,
   h5,
   h6 {
-    @apply font-headline;
+    font-family: var(--font-headline);
+  }
+
+  a {
+    @apply text-inherit no-underline;
+  }
+
+  * {
+    @apply box-border;
+  }
+}
+
+/* Custom animations */
+@keyframes typing {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes score-update {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Component styles */
+@layer components {
+  .dotsContainer {
+    @apply w-16 h-6 bg-muted rounded-full flex justify-center items-center;
+  }
+
+  #dot1,
+  #dot2,
+  #dot3 {
+    @apply w-2 h-2 bg-muted-foreground rounded-full mx-1 transition-all duration-500 ease-in-out;
+    animation: typing 1s infinite;
+  }
+
+  #dot1 {
+    animation-delay: 1s;
+  }
+  #dot2 {
+    animation-delay: 0.5s;
+  }
+  #dot3 {
+    animation-delay: 0.8s;
   }
 }
