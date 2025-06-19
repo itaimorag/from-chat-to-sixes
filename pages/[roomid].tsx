@@ -11,6 +11,7 @@ import UserAvatar from "@/components/useravatar";
 import Layout from "@/components/layout";
 import styles from "@/styles/chatroom.module.css";
 import NameModal from "@/components/NameModal";
+import axios from "axios";
 
 export default function ChatRoom() {
   const router = useRouter();
@@ -30,6 +31,29 @@ export default function ChatRoom() {
   const scrollTarget = useRef(null);
   const { isTyping, startTyping, stopTyping, cancelTyping } = useTyping();
   const [showNameModal, setShowNameModal] = useState(true);
+
+  useEffect(() => {
+    if (!roomid) return;
+    const checkRoom = async () => {
+      try {
+        const response = await axios.get(`/api/rooms/${roomid}/rooms`);
+        const result = response.data;
+        console.log("result", result);
+        if (!result.isRoomExist) {
+          router.replace("/");
+          alert("Room does not exist");
+        }
+        if (result.isRoomMax) {
+          router.replace("/");
+          alert("Room is full");
+        }
+      } catch (err) {
+        // Optionally handle error (e.g., room doesn't exist)
+        router.replace("/");
+      }
+    };
+    checkRoom();
+  }, [roomid]);
 
   useEffect(() => {
     const response = fetch("/api/currenttime")

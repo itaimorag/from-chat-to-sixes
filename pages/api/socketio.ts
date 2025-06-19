@@ -9,7 +9,13 @@ import {
   STOP_TYPING_MESSAGE_EVENT,
 } from "@/lib/eventconst";
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getRoom } from "@/lib/rooms";
+import {
+  getRoom,
+  createRoom,
+  addUserToRoom,
+  removeUserFromRoom,
+  removeRoom,
+} from "@/lib/rooms";
 
 function ioHandler(req: NextApiRequest, res: NextApiResponse) {
   if (!(res.socket as any).server.io) {
@@ -26,13 +32,21 @@ function ioHandler(req: NextApiRequest, res: NextApiResponse) {
 
       socket.join(roomId as string);
 
-      const user = addUser(
-        socket.id,
-        roomId as string,
-        name as string,
-        picture as string
-      );
-      io.in(roomId as string).emit(USER_JOIN_CHAT_EVENT, user);
+      // Add user to Redis room
+      (async () => {
+        let room = await getRoom(roomId as string);
+        if (!room) {
+          room = await createRoom(roomId as string, 10); // Default maxUsers=10, adjust as needed
+        }
+        const user = {
+          id: socket.id,
+          room: roomId as string,
+          name: name as string,
+          picture: picture as string,
+        };
+        await addUserToRoom(roomId as string, user);
+        io.in(roomId as string).emit(USER_JOIN_CHAT_EVENT, user);
+      })();
 
       // Listen for new messages
       socket.on(NEW_CHAT_MESSAGE_EVENT, (data) => {
@@ -50,9 +64,24 @@ function ioHandler(req: NextApiRequest, res: NextApiResponse) {
 
       // Leave the room if the user closes the socket
       socket.on("disconnect", () => {
-        removeUser(socket.id);
-        io.in(roomId as string).emit(USER_LEAVE_CHAT_EVENT, user);
-        socket.leave(roomId as string);
+        (async () => {
+          console.log("disconnect");
+
+          await removeUserFromRoom(roomId as string, socket.id);
+          io.in(roomId as string).emit(USER_LEAVE_CHAT_EVENT, {
+            id: socket.id,
+          });
+          socket.leave(roomId as string);
+
+          // Check if the room is empty and delete if so
+          const room = await getRoom(roomId as string);
+          console.log("romoomomomomm", room);
+
+          if (room && room.users.length === 0) {
+            await removeRoom(roomId as string);
+            console.log(`Room ${roomId} deleted because it is empty.`);
+          }
+        })();
       });
     });
 

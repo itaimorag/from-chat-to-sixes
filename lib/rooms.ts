@@ -1,70 +1,51 @@
+import redis from "./redis";
 import { Room, User } from "./types";
 
-class RoomStore {
-  private static instance: RoomStore;
-  private rooms: Map<string, Room>;
+const ROOM_PREFIX = "room:";
 
-  private constructor() {
-    this.rooms = new Map();
-  }
+export const getRoom = async (id: string): Promise<Room | null> => {
+  const data = await redis.get<Room>(ROOM_PREFIX + id);
+  return data ?? null;
+};
 
-  public static getInstance(): RoomStore {
-    if (!RoomStore.instance) {
-      RoomStore.instance = new RoomStore();
-    }
-    return RoomStore.instance;
-  }
+export const createRoom = async (
+  id: string,
+  maxUsers: number
+): Promise<Room> => {
+  const room: Room = { id, users: [], maxUsers };
+  await redis.set(ROOM_PREFIX + id, room);
+  return room;
+};
 
-  public getRoom(id: string) {
-    console.log("rooms", this.rooms);
-    return this.rooms.get(id);
-  }
+export const addUserToRoom = async (
+  id: string,
+  user: User
+): Promise<Room | null> => {
+  const room = await getRoom(id);
+  if (!room) return null;
+  if (room.users.length >= room.maxUsers) return room;
+  room.users.push(user);
+  await redis.set(ROOM_PREFIX + id, room);
+  return room;
+};
 
-  public createRoom(id: string, maxUsers: number) {
-    const room = { id, users: [], maxUsers };
-    this.rooms.set(id, room);
-    return room;
-  }
+export const removeUserFromRoom = async (
+  id: string,
+  userId: string
+): Promise<Room | null> => {
+  const room = await getRoom(id);
+  if (!room) return null;
+  room.users = room.users.filter((u) => u.id !== userId);
+  await redis.set(ROOM_PREFIX + id, room);
+  return room;
+};
 
-  public removeRoom(id: string) {
-    this.rooms.delete(id);
-  }
+export const removeRoom = async (id: string) => {
+  await redis.del(ROOM_PREFIX + id);
+};
 
-  public addUserToRoom(id: string, user: User) {
-    const room = this.getRoom(id);
-    if (!room) return;
-    if (room.users.length >= room.maxUsers) return;
-    room.users.push(user);
-    return room;
-  }
-
-  public removeUserFromRoom(id: string, userId: string) {
-    const room = this.getRoom(id);
-    if (!room) return;
-    room.users = room.users.filter((user) => user.id !== userId);
-    return room;
-  }
-
-  public isRoomFull(id: string) {
-    const room = this.getRoom(id);
-    if (!room) return false;
-    return room.users.length >= room.maxUsers;
-  }
-
-  public getAllRooms() {
-    return Array.from(this.rooms.values());
-  }
-}
-
-const roomStore = RoomStore.getInstance();
-
-export const getRoom = (id: string) => roomStore.getRoom(id);
-export const createRoom = (id: string, maxUsers: number) =>
-  roomStore.createRoom(id, maxUsers);
-export const removeRoom = (id: string) => roomStore.removeRoom(id);
-export const addUserToRoom = (id: string, user: User) =>
-  roomStore.addUserToRoom(id, user);
-export const removeUserFromRoom = (id: string, userId: string) =>
-  roomStore.removeUserFromRoom(id, userId);
-export const isRoomFull = (id: string) => roomStore.isRoomFull(id);
-export const getAllRooms = () => roomStore.getAllRooms();
+export const isRoomFull = async (id: string): Promise<boolean> => {
+  const room = await getRoom(id);
+  if (!room) return false;
+  return room.users.length >= room.maxUsers;
+};
