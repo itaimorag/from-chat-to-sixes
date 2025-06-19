@@ -5,14 +5,14 @@ const nextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'randomuser.me',
-        port: '',
-        pathname: '/api/**',
+        protocol: "https",
+        hostname: "randomuser.me",
+        port: "",
+        pathname: "/api/**",
       },
     ],
   },
-  output: 'standalone',
-}
+  output: "standalone",
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;
