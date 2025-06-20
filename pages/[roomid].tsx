@@ -2,35 +2,31 @@
 import { useEffect, useState, useRef, FormEvent } from "react";
 import { useRouter } from "next/router";
 import useChat from "@/lib/usechat";
-import ChatMessage from "@/components/chatmessage";
+import useGame from "@/lib/usegame";
 import useTyping from "@/lib/usetyping";
-import NewMessageForm from "@/components/newmessageform";
-import TypingMessage from "@/components/typingmessage";
-import Users from "@/components/users";
 import UserAvatar from "@/components/useravatar";
 import Layout from "@/components/layout";
 import styles from "@/styles/chatroom.module.css";
 import NameModal from "@/components/NameModal";
+import type { Player, GameState as GameStateType, Card } from "@/lib/types";
+import { PlayerSetup } from "@/components/PlayerSetup";
+import { GameBoard } from "@/components/GameBoard";
+import { PlayerIdentitySelection } from "@/components/PlayerIdentitySelection";
+import { SixesIcon } from "@/components/icons/SixesIcon";
+import { Card as UICard, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Users, Gamepad2, Trophy, Settings } from "lucide-react";
 import axios from "axios";
+
+const LOCAL_STORAGE_CURRENT_PLAYER_ID = "sixes_currentPlayerId";
 
 export default function ChatRoom() {
   const router = useRouter();
   const { roomid } = router.query;
-  const {
-    messages,
-    user,
-    users,
-    typingUsers,
-    sendMessage,
-    startTypingMessage,
-    stopTypingMessage,
-    setUser,
-  } = useChat(roomid as string);
-  const [newMessage, setNewMessage] = useState("");
-  const [timeDiff, setTimeDiff] = useState(0);
-  const scrollTarget = useRef(null);
-  const { isTyping, startTyping, stopTyping, cancelTyping } = useTyping();
+  const { user, players, currentPlayerId, setUser } = useGame(roomid as string);
   const [showNameModal, setShowNameModal] = useState(true);
+  const [gameState, setGameState] = useState<GameStateType>("playing");
+  const [gameId, setGameId] = useState(1);
 
   useEffect(() => {
     if (!roomid) return;
@@ -55,30 +51,6 @@ export default function ChatRoom() {
     checkRoom();
   }, [roomid]);
 
-  useEffect(() => {
-    const response = fetch("/api/currenttime")
-      .then((response) => {
-        return response.json();
-      })
-      .then((data) => {
-        setTimeDiff(Date.now() - data.current);
-      })
-      .catch((error) => {
-        //---
-      });
-  }, []);
-
-  const handleNewMessageChange = (event: FormEvent<HTMLInputElement>) => {
-    setNewMessage(event.currentTarget.value.replace(/<\/?[^>]*>/g, ""));
-  };
-
-  const handleSendMessage = (event: FormEvent<HTMLInputElement>) => {
-    event.preventDefault();
-    cancelTyping();
-    sendMessage(newMessage);
-    setNewMessage("");
-  };
-
   const handleNameSubmit = (name: string) => {
     console.log("name", name);
     setUser({
@@ -89,17 +61,85 @@ export default function ChatRoom() {
     setShowNameModal(false);
   };
 
-  useEffect(() => {
-    if (isTyping) startTypingMessage();
-    else stopTypingMessage();
-  }, [isTyping]);
+  // const handleSetupComplete = (newPlayers: Player[]) => {
+  //   setPlayers(newPlayers.map((p) => ({ ...p, hand: [] }))); // Initialize with empty hands
+  //   // If only one player or if currentPlayerId is already set and valid for new players, skip selection.
+  //   if (newPlayers.length === 1) {
+  //     const newPlayerId = newPlayers[0].id;
+  //     setCurrentPlayerId(newPlayerId);
+  //     localStorage.setItem(LOCAL_STORAGE_CURRENT_PLAYER_ID, newPlayerId);
+  //     setGameState("playing");
+  //     setGameId((prevId) => prevId + 1);
+  //   } else if (
+  //     currentPlayerId &&
+  //     newPlayers.some((p) => p.id === currentPlayerId)
+  //   ) {
+  //     setGameState("playing");
+  //     setGameId((prevId) => prevId + 1);
+  //   } else {
+  //     // If currentPlayerId is not set or not valid for the new set of players, go to selection
+  //     localStorage.removeItem(LOCAL_STORAGE_CURRENT_PLAYER_ID); // Clear potentially stale ID
+  //     setCurrentPlayerId(null);
+  //     setGameState("player_selection");
+  //   }
+  // };
+
+  // const handlePlayerSelected = (playerId: string) => {
+  //   setCurrentPlayerId(playerId);
+  //   localStorage.setItem(LOCAL_STORAGE_CURRENT_PLAYER_ID, playerId);
+  //   setGameState("playing");
+  //   setGameId((prevId) => prevId + 1);
+  // };
+
+  const handleNewGame = () => {
+    setGameState("playing");
+    // currentPlayerId remains, will be validated or re-selected in handleSetupComplete
+  };
 
   useEffect(() => {
-    // If the component has not been rendered yet, scrollTarget.current will be null
-    if (scrollTarget.current) {
-      (scrollTarget.current as any).scrollIntoView({ behavior: "smooth" });
+    if (
+      typeof window !== "undefined" &&
+      process.env.NODE_ENV === "development"
+    ) {
+      console.log("Game State Change:", {
+        gameState,
+        players,
+        gameId,
+        currentPlayerId,
+      });
     }
-  }, [messages.length + typingUsers.length]);
+  }, [gameState, players, gameId, currentPlayerId]);
+
+  const getGameStateBadge = () => {
+    switch (gameState) {
+      case "waiting_for_players":
+        return (
+          <Badge variant="default" className="flex items-center gap-1">
+            <Gamepad2 className="h-3 w-3" /> Waiting for Players
+          </Badge>
+        );
+      case "playing":
+        return (
+          <Badge variant="default" className="flex items-center gap-1">
+            <Gamepad2 className="h-3 w-3" /> Playing
+          </Badge>
+        );
+      case "final_round":
+        return (
+          <Badge variant="destructive" className="flex items-center gap-1">
+            Final Round
+          </Badge>
+        );
+      case "game_over":
+        return (
+          <Badge variant="secondary" className="flex items-center gap-1">
+            <Trophy className="h-3 w-3" /> Game Over
+          </Badge>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <Layout>
@@ -110,32 +150,91 @@ export default function ChatRoom() {
           {user && <h2>User: {user.name}</h2>}
           {user && <UserAvatar user={user}></UserAvatar>}
         </div>
-        <Users users={users}></Users>
-        <div className={styles.messagesContainer}>
-          <ol className={styles.messagesList}>
-            {messages.map((message, i) => {
-              message.sentAt += timeDiff;
-              return (
-                <li key={i}>
-                  <ChatMessage message={message}></ChatMessage>
-                </li>
-              );
-            })}
-            {typingUsers.map((user, i) => (
-              <li key={messages.length + i}>
-                <TypingMessage user={user}></TypingMessage>
-              </li>
-            ))}
-          </ol>
-          <div ref={scrollTarget}></div>
+        <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+          <div className="container mx-auto p-4 md:p-8 flex flex-col items-center">
+            {/* Header with enhanced styling */}
+            <header className="mb-8 text-center w-full">
+              <div className="flex items-center justify-center mb-4">
+                {getGameStateBadge()}
+              </div>
+              <div className="relative">
+                <h1 className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent flex items-center justify-center mb-4">
+                  <SixesIcon className="h-16 w-16 md:h-20 md:w-20 mr-4 fill-current text-primary animate-pulse" />
+                  Sixes
+                </h1>
+                <div className="absolute -top-2 -right-2 md:-top-4 md:-right-4">
+                  <div className="w-4 h-4 md:w-6 md:h-6 bg-primary rounded-full animate-ping opacity-75"></div>
+                </div>
+              </div>
+              <p className="text-muted-foreground text-lg md:text-xl mt-2 font-body max-w-2xl mx-auto">
+                Track your Shishiyot game scores with ease! The ultimate card
+                game companion.
+                {JSON.stringify(players)}
+              </p>
+
+              {/* Game info display */}
+              {players.length > 0 && (
+                <UICard className="mt-6 max-w-md mx-auto bg-card/50 backdrop-blur-sm border-primary/20">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Players:</span>
+                      <span className="font-semibold text-primary">
+                        {players.length}
+                      </span>
+                    </div>
+                    {currentPlayerId && (
+                      <div className="flex items-center justify-between text-sm mt-1">
+                        <span className="text-muted-foreground">You are:</span>
+                        <span className="font-semibold text-primary">
+                          {players.find((p) => p.id === currentPlayerId)?.name}
+                        </span>
+                      </div>
+                    )}
+                  </CardContent>
+                </UICard>
+              )}
+            </header>
+
+            {/* Main content with enhanced animations */}
+            <main className="w-full max-w-4xl">
+              <div className="transition-all duration-500 ease-in-out">
+                {(gameState === "playing" ||
+                  gameState === "final_round" ||
+                  gameState === "game_over") &&
+                  players.length > 0 &&
+                  currentPlayerId && (
+                    <div className="animate-in slide-in-from-bottom-4 duration-500">
+                      <GameBoard
+                        key={gameId}
+                        initialPlayers={players}
+                        onNewGame={handleNewGame}
+                        currentPlayerId={currentPlayerId}
+                      />
+                    </div>
+                  )}
+              </div>
+            </main>
+
+            {/* Enhanced footer */}
+            <footer className="mt-12 text-center text-muted-foreground text-sm">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                <div
+                  className="w-2 h-2 bg-primary rounded-full animate-pulse"
+                  style={{ animationDelay: "0.2s" }}
+                ></div>
+                <div
+                  className="w-2 h-2 bg-primary rounded-full animate-pulse"
+                  style={{ animationDelay: "0.4s" }}
+                ></div>
+              </div>
+              <p>
+                &copy; {new Date().getFullYear()} Sixes Scorecard. Enjoy the
+                game!
+              </p>
+            </footer>
+          </div>
         </div>
-        <NewMessageForm
-          newMessage={newMessage}
-          handleNewMessageChange={handleNewMessageChange}
-          handleStartTyping={startTyping}
-          handleStopTyping={stopTyping}
-          handleSendMessage={handleSendMessage}
-        ></NewMessageForm>
       </div>
     </Layout>
   );

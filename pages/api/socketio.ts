@@ -43,6 +43,10 @@ function ioHandler(req: NextApiRequest, res: NextApiResponse) {
           room: roomId as string,
           name: name as string,
           picture: picture as string,
+          scoresByRound: [],
+          totalScore: 0,
+          isStopper: false,
+          hand: [],
         };
         await addUserToRoom(roomId as string, user);
         io.in(roomId as string).emit(USER_JOIN_CHAT_EVENT, user);

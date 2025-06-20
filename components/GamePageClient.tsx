@@ -13,7 +13,7 @@ import { Users, Gamepad2, Trophy, Settings } from "lucide-react";
 const LOCAL_STORAGE_CURRENT_PLAYER_ID = "sixes_currentPlayerId";
 
 export function GamePageClient() {
-  const [gameState, setGameState] = useState<GameStateType>("setup");
+  const [gameState, setGameState] = useState<GameStateType>("playing");
   const [players, setPlayers] = useState<Player[]>([]);
   const [gameId, setGameId] = useState(1);
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);

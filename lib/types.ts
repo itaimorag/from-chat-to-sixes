@@ -64,6 +64,7 @@ export interface Card {
 export interface Player {
   id: string;
   name: string;
+  picture: string;
   scoresByRound: number[];
   totalScore: number;
   isStopper: boolean; // Indicates if this player called STOP
@@ -71,11 +72,11 @@ export interface Player {
 }
 
 export type GameState =
-  | "setup"
-  | "player_selection"
+  | "waiting_for_players"
   | "playing"
   | "final_round"
-  | "game_over";
+  | "game_over"
+  | "game_over_final_round";
 
 // State for the form within the StopAdvisorDialog
 export interface StopAdvisorDialogFormState {
