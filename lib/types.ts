@@ -12,7 +12,8 @@ export interface User {
 
 export interface Room {
   id: string;
-  users: User[];
+  players: Player[];
+  gameState: GameState;
   maxUsers: number;
 }
 

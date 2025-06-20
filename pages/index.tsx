@@ -16,11 +16,11 @@ export default function Home() {
 
   const handleJoinRoom = async () => {
     if (roomName.trim()) {
-      const response = await axios.get(`/api/rooms/${roomName}/rooms`);
+      const response = await axios.get(`/api/rooms/${roomName}`);
       const result = response.data;
       console.log("result", result);
-      if (result.isRoomExist) {
-        if (result.isRoomMax) {
+      if (result) {
+        if (result.players.length >= result.maxUsers) {
           alert("Room is full");
           return;
         }
@@ -32,7 +32,7 @@ export default function Home() {
   };
 
   const handlePlayerCountSubmit = async (count: number) => {
-    const response = await axios.post(`/api/rooms/${roomName}/create`, {
+    const response = await axios.post(`/api/rooms/create`, {
       roomid: roomName,
       maxUsers: count,
     });

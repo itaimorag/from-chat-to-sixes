@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import axios from "axios";
 import { UserData, TypingInfo, Message } from "./types";
-import type { Player } from "@/lib/types";
+import type { Player, Room } from "@/lib/types";
 
 import {
   USER_JOIN_CHAT_EVENT,
@@ -14,20 +14,24 @@ import {
 
 export default function useGame(roomId: string) {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [players, setPlayers] = useState<Player[]>([]);
+  const [room, setRoom] = useState<Room>();
   const [typingUsers, setTypingUsers] = useState<any[]>([]);
   const [user, setUser] = useState<UserData>();
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
   const socketRef = useRef<any>();
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      const response = await axios.get(`/api/rooms/${roomId}/users`);
-      const result = response.data.users;
-      setPlayers(result);
+    const fetchRoom = async () => {
+      const response = await axios.get(`/api/rooms/${roomId}`);
+
+      const result = response.data;
+
+      if (result) {
+        setRoom(result);
+      }
     };
 
-    fetchUsers();
+    fetchRoom();
   }, [roomId]);
 
   useEffect(() => {
@@ -50,19 +54,18 @@ export default function useGame(roomId: string) {
       });
 
       socketRef.current.on("connect", () => {
-        console.log(socketRef.current.id);
+        const id = socketRef.current.id;
+        console.log(id);
+
+        setCurrentPlayerId(id);
       });
 
       socketRef.current.on(USER_JOIN_CHAT_EVENT, (player: Player) => {
-        if (player.id === socketRef.current.id) {
-          setCurrentPlayerId(player.id);
-        }
-
-        setPlayers((players) => [...players, player]);
+        setRoom((room) => room ? { ...room, players: [...room.players, player] } : room);
       });
 
-      socketRef.current.on(USER_LEAVE_CHAT_EVENT, (player: Player) => {
-        setPlayers((players) => players.filter((u) => u.id !== player.id));
+      socketRef.current.on(USER_LEAVE_CHAT_EVENT, (playerId: string) => {
+        setRoom((room) => room ? { ...room, players: room.players.filter((u) => u.id !== playerId) } : room);
       });
 
       socketRef.current.on(NEW_CHAT_MESSAGE_EVENT, (message: Message) => {
@@ -130,12 +133,12 @@ export default function useGame(roomId: string) {
     messages,
     user,
     currentPlayerId,
-    players,
+    room,
     typingUsers,
     sendMessage,
     startTypingMessage,
     stopTypingMessage,
     setUser,
-    setPlayers,
+    setRoom,
   };
 }

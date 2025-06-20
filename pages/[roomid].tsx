@@ -23,7 +23,7 @@ const LOCAL_STORAGE_CURRENT_PLAYER_ID = "sixes_currentPlayerId";
 export default function ChatRoom() {
   const router = useRouter();
   const { roomid } = router.query;
-  const { user, players, currentPlayerId, setUser } = useGame(roomid as string);
+  const { user, room, currentPlayerId, setUser } = useGame(roomid as string);
   const [showNameModal, setShowNameModal] = useState(true);
   const [gameState, setGameState] = useState<GameStateType>("playing");
   const [gameId, setGameId] = useState(1);
@@ -32,14 +32,14 @@ export default function ChatRoom() {
     if (!roomid) return;
     const checkRoom = async () => {
       try {
-        const response = await axios.get(`/api/rooms/${roomid}/rooms`);
+        const response = await axios.get(`/api/rooms/${roomid}`);
         const result = response.data;
         console.log("result", result);
-        if (!result.isRoomExist) {
+        if (!result) {
           router.replace("/");
           alert("Room does not exist");
         }
-        if (result.isRoomMax) {
+        if (result.players.length >= result.maxUsers) {
           router.replace("/");
           alert("Room is full");
         }
@@ -52,7 +52,6 @@ export default function ChatRoom() {
   }, [roomid]);
 
   const handleNameSubmit = (name: string) => {
-    console.log("name", name);
     setUser({
       name,
       picture:
@@ -61,54 +60,11 @@ export default function ChatRoom() {
     setShowNameModal(false);
   };
 
-  // const handleSetupComplete = (newPlayers: Player[]) => {
-  //   setPlayers(newPlayers.map((p) => ({ ...p, hand: [] }))); // Initialize with empty hands
-  //   // If only one player or if currentPlayerId is already set and valid for new players, skip selection.
-  //   if (newPlayers.length === 1) {
-  //     const newPlayerId = newPlayers[0].id;
-  //     setCurrentPlayerId(newPlayerId);
-  //     localStorage.setItem(LOCAL_STORAGE_CURRENT_PLAYER_ID, newPlayerId);
-  //     setGameState("playing");
-  //     setGameId((prevId) => prevId + 1);
-  //   } else if (
-  //     currentPlayerId &&
-  //     newPlayers.some((p) => p.id === currentPlayerId)
-  //   ) {
-  //     setGameState("playing");
-  //     setGameId((prevId) => prevId + 1);
-  //   } else {
-  //     // If currentPlayerId is not set or not valid for the new set of players, go to selection
-  //     localStorage.removeItem(LOCAL_STORAGE_CURRENT_PLAYER_ID); // Clear potentially stale ID
-  //     setCurrentPlayerId(null);
-  //     setGameState("player_selection");
-  //   }
-  // };
-
-  // const handlePlayerSelected = (playerId: string) => {
-  //   setCurrentPlayerId(playerId);
-  //   localStorage.setItem(LOCAL_STORAGE_CURRENT_PLAYER_ID, playerId);
-  //   setGameState("playing");
-  //   setGameId((prevId) => prevId + 1);
-  // };
-
   const handleNewGame = () => {
+    // TODO
     setGameState("playing");
     // currentPlayerId remains, will be validated or re-selected in handleSetupComplete
   };
-
-  useEffect(() => {
-    if (
-      typeof window !== "undefined" &&
-      process.env.NODE_ENV === "development"
-    ) {
-      console.log("Game State Change:", {
-        gameState,
-        players,
-        gameId,
-        currentPlayerId,
-      });
-    }
-  }, [gameState, players, gameId, currentPlayerId]);
 
   const getGameStateBadge = () => {
     switch (gameState) {
@@ -145,13 +101,19 @@ export default function ChatRoom() {
     <Layout>
       <div className={styles.chatRoomContainer}>
         {showNameModal && <NameModal onSubmit={handleNameSubmit} />}
-        <div className={styles.chatRoomTopBar}>
-          <h1>Room: {roomid}</h1>
-          {user && <h2>User: {user.name}</h2>}
-          {user && <UserAvatar user={user}></UserAvatar>}
-        </div>
-        <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-          <div className="container mx-auto p-4 md:p-8 flex flex-col items-center">
+        <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/2 overflow-y-auto">
+          <div className="page-header flex items-center justify-between bg-gradient-to-r from-blue-600 via-blue-500 to-blue-400 text-white px-6 py-4 rounded-xl shadow-md mb-6">
+            <div className="flex items-center gap-4">
+              <h1 className="text-2xl font-bold tracking-wide">Room: {roomid}</h1>
+            </div>
+            {user && (
+              <div className="flex items-center gap-3">
+                <UserAvatar user={user} />
+                <h2 className="text-lg font-medium">{user.name}</h2>
+              </div>
+            )}
+          </div>
+          <main className="page-main container mx-auto p-4 md:p-8 flex flex-col items-center">
             {/* Header with enhanced styling */}
             <header className="mb-8 text-center w-full">
               <div className="flex items-center justify-center mb-4">
@@ -169,24 +131,23 @@ export default function ChatRoom() {
               <p className="text-muted-foreground text-lg md:text-xl mt-2 font-body max-w-2xl mx-auto">
                 Track your Shishiyot game scores with ease! The ultimate card
                 game companion.
-                {JSON.stringify(players)}
               </p>
 
               {/* Game info display */}
-              {players.length > 0 && (
+              {room && room.players.length > 0 && (
                 <UICard className="mt-6 max-w-md mx-auto bg-card/50 backdrop-blur-sm border-primary/20">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Players:</span>
                       <span className="font-semibold text-primary">
-                        {players.length}
+                        {room.players.length}
                       </span>
                     </div>
                     {currentPlayerId && (
                       <div className="flex items-center justify-between text-sm mt-1">
                         <span className="text-muted-foreground">You are:</span>
                         <span className="font-semibold text-primary">
-                          {players.find((p) => p.id === currentPlayerId)?.name}
+                          {room.players.find((p) => p.id === currentPlayerId)?.name}
                         </span>
                       </div>
                     )}
@@ -201,12 +162,12 @@ export default function ChatRoom() {
                 {(gameState === "playing" ||
                   gameState === "final_round" ||
                   gameState === "game_over") &&
-                  players.length > 0 &&
+                  room &&room.players.length > 0 &&
                   currentPlayerId && (
                     <div className="animate-in slide-in-from-bottom-4 duration-500">
                       <GameBoard
                         key={gameId}
-                        initialPlayers={players}
+                        initialPlayers={room.players}
                         onNewGame={handleNewGame}
                         currentPlayerId={currentPlayerId}
                       />
@@ -233,7 +194,7 @@ export default function ChatRoom() {
                 game!
               </p>
             </footer>
-          </div>
+          </main>
         </div>
       </div>
     </Layout>

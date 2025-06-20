@@ -1,5 +1,5 @@
 import redis from "./redis";
-import { Room, User } from "./types";
+import { Room, Player } from "./types";
 
 const ROOM_PREFIX = "room:";
 
@@ -12,31 +12,35 @@ export const createRoom = async (
   id: string,
   maxUsers: number
 ): Promise<Room> => {
-  const room: Room = { id, users: [], maxUsers };
+  const room: Room = { id, gameState: "playing", players: [], maxUsers }; // TODO change to waiting_for_players
+  await redis.set(ROOM_PREFIX + id, room);
+
+  return room;
+};
+
+export const addPlayerToRoom = async (
+  id: string,
+  player: Player
+): Promise<Room | null> => {
+  const room = await getRoom(id);
+  if (!room) return null;
+  if (room.players.length >= room.maxUsers) return room;
+  room.players.push(player);
   await redis.set(ROOM_PREFIX + id, room);
   return room;
 };
 
-export const addUserToRoom = async (
+export const removePlayerFromRoom = async (
   id: string,
-  user: User
+  playerId: string
 ): Promise<Room | null> => {
   const room = await getRoom(id);
-  if (!room) return null;
-  if (room.users.length >= room.maxUsers) return room;
-  room.users.push(user);
-  await redis.set(ROOM_PREFIX + id, room);
-  return room;
-};
 
-export const removeUserFromRoom = async (
-  id: string,
-  userId: string
-): Promise<Room | null> => {
-  const room = await getRoom(id);
   if (!room) return null;
-  room.users = room.users.filter((u) => u.id !== userId);
+
+  room.players = room.players.filter((u) => u.id !== playerId);
   await redis.set(ROOM_PREFIX + id, room);
+
   return room;
 };
 
@@ -46,6 +50,8 @@ export const removeRoom = async (id: string) => {
 
 export const isRoomFull = async (id: string): Promise<boolean> => {
   const room = await getRoom(id);
+
   if (!room) return false;
-  return room.users.length >= room.maxUsers;
+
+  return room.players.length >= room.maxUsers;
 };
