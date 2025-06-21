@@ -15,6 +15,10 @@ export interface Room {
   players: Player[];
   gameState: GameState;
   maxUsers: number;
+  deck: Card[];
+  discard: Card[];
+  currentTurnPlayerId?: string;
+  stopperId?: string;
 }
 
 export interface TypingInfo {
@@ -38,9 +42,9 @@ export interface Message {
   ownedByCurrentUser?: boolean;
 }
 
-export type Suit = "S" | "H" | "D" | "C"; // Spades, Hearts, Diamonds, Clubs
+export type Suit = "hearts" | "diamonds" | "clubs" | "spades";
 export type Rank =
-  | "A"
+   "ace"
   | "2"
   | "3"
   | "4"
@@ -49,17 +53,14 @@ export type Rank =
   | "7"
   | "8"
   | "9"
-  | "T"
-  | "J"
-  | "Q"
-  | "K"; // Ace, 2-10, Jack, Queen, King (T for Ten)
+  | "10"
+  | "jack"
+  | "queen"
+  | "king";
 
 export interface Card {
-  id: string; // Unique identifier for the card instance
-  suit: Suit | "JOKER"; // JOKER for jokers
-  rank: Rank | "JOKER"; // JOKER for jokers
-  name: string; // e.g., "Ace of Spades", "Joker"
-  imageSrc: string; // URL to the card's front image
+  suit: Suit;
+  rank: Rank;
 }
 
 export interface Player {
@@ -68,16 +69,17 @@ export interface Player {
   picture: string;
   scoresByRound: number[];
   totalScore: number;
-  isStopper: boolean; // Indicates if this player called STOP
-  hand: Card[]; // Player's current hand of cards
+  canReplaceBottom: boolean;
+  hasPeeked: boolean;
+  hand: { top: Card[]; bottom: Card[] }; // Player's current hand of cards
 }
 
 export type GameState =
   | "waiting_for_players"
+  | "peeking"
   | "playing"
   | "final_round"
-  | "game_over"
-  | "game_over_final_round";
+  | "game_over";
 
 // State for the form within the StopAdvisorDialog
 export interface StopAdvisorDialogFormState {

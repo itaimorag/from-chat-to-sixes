@@ -9,9 +9,7 @@ import Layout from "@/components/layout";
 import styles from "@/styles/chatroom.module.css";
 import NameModal from "@/components/NameModal";
 import type { Player, GameState as GameStateType, Card } from "@/lib/types";
-import { PlayerSetup } from "@/components/PlayerSetup";
 import { GameBoard } from "@/components/GameBoard";
-import { PlayerIdentitySelection } from "@/components/PlayerIdentitySelection";
 import { SixesIcon } from "@/components/icons/SixesIcon";
 import { Card as UICard, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,10 +21,8 @@ const LOCAL_STORAGE_CURRENT_PLAYER_ID = "sixes_currentPlayerId";
 export default function ChatRoom() {
   const router = useRouter();
   const { roomid } = router.query;
-  const { user, room, currentPlayerId, setUser } = useGame(roomid as string);
+  const { user, room, currentPlayerId, setUser, sendNewGame, sendPeekDone, sendReplaceCard, sendDiscardCard, sendCallStop } = useGame(roomid as string);
   const [showNameModal, setShowNameModal] = useState(true);
-  const [gameState, setGameState] = useState<GameStateType>("playing");
-  const [gameId, setGameId] = useState(1);
 
   useEffect(() => {
     if (!roomid) return;
@@ -61,13 +57,12 @@ export default function ChatRoom() {
   };
 
   const handleNewGame = () => {
-    // TODO
-    setGameState("playing");
-    // currentPlayerId remains, will be validated or re-selected in handleSetupComplete
+    sendNewGame();
   };
 
   const getGameStateBadge = () => {
-    switch (gameState) {
+    if (!room) return null;
+    switch (room.gameState) {
       case "waiting_for_players":
         return (
           <Badge variant="default" className="flex items-center gap-1">
@@ -159,20 +154,19 @@ export default function ChatRoom() {
             {/* Main content with enhanced animations */}
             <main className="w-full max-w-4xl">
               <div className="transition-all duration-500 ease-in-out">
-                {(gameState === "playing" ||
-                  gameState === "final_round" ||
-                  gameState === "game_over") &&
-                  room &&room.players.length > 0 &&
-                  currentPlayerId && (
-                    <div className="animate-in slide-in-from-bottom-4 duration-500">
-                      <GameBoard
-                        key={gameId}
-                        initialPlayers={room.players}
-                        onNewGame={handleNewGame}
-                        currentPlayerId={currentPlayerId}
-                      />
-                    </div>
-                  )}
+                {room && room.gameState && room.players.length > 0 && currentPlayerId && (
+                  <div className="animate-in slide-in-from-bottom-4 duration-500">
+                    <GameBoard
+                      playerId={currentPlayerId}
+                      room={room}
+                      onPeekDone={sendPeekDone}
+                      onReplaceCard={sendReplaceCard}
+                      onDiscardCard={sendDiscardCard}
+                      onCallStop={sendCallStop}
+                      onNewGame={handleNewGame}
+                    />
+                  </div>
+                )}
               </div>
             </main>
 

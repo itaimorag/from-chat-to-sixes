@@ -1,15 +1,19 @@
 import { useEffect, useRef, useState } from "react";
-import { io } from "socket.io-client";
 import axios from "axios";
 import { UserData, TypingInfo, Message } from "./types";
 import type { Player, Room } from "@/lib/types";
+import { io, Socket } from "socket.io-client";
 
 import {
-  USER_JOIN_CHAT_EVENT,
-  USER_LEAVE_CHAT_EVENT,
+  ROOM_UPDATE_EVENT,
   NEW_CHAT_MESSAGE_EVENT,
   START_TYPING_MESSAGE_EVENT,
   STOP_TYPING_MESSAGE_EVENT,
+  PEEK_DONE_EVENT,
+  NEW_GAME_EVENT,
+  REPLACE_CARD_EVENT,
+  DISCARD_CARD_EVENT,
+  CALL_STOP_EVENT,
 } from "./eventconst";
 
 export default function useGame(roomId: string) {
@@ -34,74 +38,42 @@ export default function useGame(roomId: string) {
     fetchRoom();
   }, [roomId]);
 
-  useEffect(() => {
-    const fetchMessages = async () => {
-      const response = await axios.get(`/api/rooms/${roomId}/messages`);
-      const result = response.data.messages;
-      setMessages(result);
-    };
+  // useEffect(() => {
+  //   const fetchMessages = async () => {
+  //     const response = await axios.get(`/api/rooms/${roomId}/messages`);
+  //     const result = response.data.messages;
+  //     setMessages(result);
+  //   };
 
-    fetchMessages();
-  }, [roomId]);
+  //   fetchMessages();
+  // }, [roomId]);
 
   useEffect(() => {
     if (!user) {
       return;
     }
-    fetch("/api/socketio").finally(() => {
-      socketRef.current = io({
-        query: { roomId, name: user.name, picture: user.picture },
-      });
 
+    if (window?.location?.origin) {
+      const socket: Socket = io(window.location.origin, {
+        query: { roomId, name: user.name, picture: user.picture },
+        // auth: { token: localStorage.getItem("jwt_token") } TODO: add token
+      });
+      socketRef.current = socket;
+  
       socketRef.current.on("connect", () => {
         const id = socketRef.current.id;
-        console.log(id);
-
+  
         setCurrentPlayerId(id);
       });
-
-      socketRef.current.on(USER_JOIN_CHAT_EVENT, (player: Player) => {
-        setRoom((room) => room ? { ...room, players: [...room.players, player] } : room);
+  
+      socketRef.current.on(ROOM_UPDATE_EVENT, (room: Room) => {
+        setRoom(room);
       });
-
-      socketRef.current.on(USER_LEAVE_CHAT_EVENT, (playerId: string) => {
-        setRoom((room) => room ? { ...room, players: room.players.filter((u) => u.id !== playerId) } : room);
-      });
-
-      socketRef.current.on(NEW_CHAT_MESSAGE_EVENT, (message: Message) => {
-        const incomingMessage = {
-          ...message,
-          ownedByCurrentUser: message.senderId === socketRef.current.id,
-        };
-        setMessages((messages) => [...messages, incomingMessage]);
-      });
-
-      socketRef.current.on(
-        START_TYPING_MESSAGE_EVENT,
-        (typingInfo: TypingInfo) => {
-          if (typingInfo.senderId !== socketRef.current.id) {
-            const user = typingInfo.user;
-            setTypingUsers((users) => [...users, user]);
-          }
-        }
-      );
-
-      socketRef.current.on(
-        STOP_TYPING_MESSAGE_EVENT,
-        (typingInfo: TypingInfo) => {
-          if (typingInfo.senderId !== socketRef.current.id) {
-            const user = typingInfo.user;
-            setTypingUsers((users) =>
-              users.filter((u) => u.name !== user.name)
-            );
-          }
-        }
-      );
-
+  
       return () => {
         socketRef.current.disconnect();
       };
-    });
+    }
   }, [roomId, user]);
 
   const sendMessage = (messageBody: string) => {
@@ -129,6 +101,31 @@ export default function useGame(roomId: string) {
     });
   };
 
+  const sendReplaceCard = (row: 'top' | 'bottom', idx: number, pile: 'deck' | 'discard') => {
+    if (!socketRef.current) return;
+    socketRef.current.emit(REPLACE_CARD_EVENT, row, idx, pile);
+  };
+
+  const sendDiscardCard = () => {
+    if (!socketRef.current) return;
+    socketRef.current.emit(DISCARD_CARD_EVENT);
+  };
+
+  const sendCallStop = () => {
+    if (!socketRef.current) return;
+    socketRef.current.emit(CALL_STOP_EVENT);
+  };
+
+  const sendPeekDone = () => {
+    if (!socketRef.current) return;
+    socketRef.current.emit(PEEK_DONE_EVENT);
+  };
+
+  const sendNewGame = () => {
+    if (!socketRef.current) return;
+    socketRef.current.emit(NEW_GAME_EVENT);
+  };
+
   return {
     messages,
     user,
@@ -140,5 +137,10 @@ export default function useGame(roomId: string) {
     stopTypingMessage,
     setUser,
     setRoom,
+    sendReplaceCard,
+    sendDiscardCard,
+    sendCallStop,
+    sendNewGame,
+    sendPeekDone,
   };
 }

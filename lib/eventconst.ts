@@ -1,5 +1,9 @@
-export const USER_JOIN_CHAT_EVENT = "USER_JOIN_CHAT_EVENT";
-export const USER_LEAVE_CHAT_EVENT = "USER_LEAVE_CHAT_EVENT";
-export const NEW_CHAT_MESSAGE_EVENT = "NEW_CHAT_MESSAGE_EVENT";
-export const START_TYPING_MESSAGE_EVENT = "START_TYPING_MESSAGE_EVENT";
-export const STOP_TYPING_MESSAGE_EVENT = "STOP_TYPING_MESSAGE_EVENT";
+export const ROOM_UPDATE_EVENT = "room_update";
+export const NEW_CHAT_MESSAGE_EVENT = "new_chat_message";
+export const START_TYPING_MESSAGE_EVENT = "start_typing_message";
+export const STOP_TYPING_MESSAGE_EVENT = "stop_typing_message";
+export const REPLACE_CARD_EVENT = "replace_card";
+export const DISCARD_CARD_EVENT = "discard_card";
+export const CALL_STOP_EVENT = "call_stop";
+export const NEW_GAME_EVENT = "new_game";
+export const PEEK_DONE_EVENT = "peek_done";

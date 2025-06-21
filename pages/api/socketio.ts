@@ -37,7 +37,7 @@ function ioHandler(req: NextApiRequest, res: NextApiResponse) {
         let room = await getRoom(roomId as string);
 
         if (!room) {
-          room = await createRoom(roomId as string, 4); // TODO Default maxUsers=10, adjust as needed
+          room = await createRoom(roomId as string, 4); // TODO Default maxUsers=4, adjust as needed
         }
 
         const player = {
@@ -48,7 +48,8 @@ function ioHandler(req: NextApiRequest, res: NextApiResponse) {
           scoresByRound: [],
           totalScore: 0,
           isStopper: false,
-          hand: [],
+          hand: { top: [], bottom: [] },
+          canReplaceTop: true,
         };
 
         await addPlayerToRoom(roomId as string, player);
