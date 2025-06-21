@@ -39,8 +39,7 @@ function PlayerHandsDisplay({ players, currentPlayerId, bottomRowPeeked, peekPha
             const isCurrentPlayer = player.id === currentPlayerId;
             // Show bottom row face up only for the current player during their peek, and only if they haven't clicked Done
             const showBottomRow = peekPhase && isCurrentPlayer && !bottomRowPeeked;
-            // After peek phase, only show the local player's hand face up
-            const showHandFaceUp = !peekPhase && isCurrentPlayer;
+            console.log("showBottomRow", showBottomRow, peekPhase, isCurrentPlayer, bottomRowPeeked);
             return (
               <div key={player.id} className="p-4 border rounded-lg bg-card/50">
                 <h3 className="text-lg font-semibold text-primary mb-2">{player.name}'s Hand {isCurrentPlayer ? "(Your Hand)" : ""}</h3>
@@ -48,35 +47,22 @@ function PlayerHandsDisplay({ players, currentPlayerId, bottomRowPeeked, peekPha
                   {/* Top row */}
                   <div className="flex gap-2 justify-center">
                     {(player.hand.top || []).map((card) => {
-                      if (showHandFaceUp) {
-                        return (
-                          <Image
-                            src={getCardImageSrc(card)}
-                            alt={card.rank + " of " + card.suit}
-                            width={70}
-                            height={100}
-                            className="rounded shadow-md"
-                            data-ai-hint={card.rank + " " + card.suit}
-                          />
-                        );
-                      } else {
-                        return (
-                          <Image
-                            src={"/assets/playing-card-back.png"}
-                            alt="Face-down card"
-                            width={70}
-                            height={100}
-                            className="rounded shadow-md"
-                            data-ai-hint="card back"
-                          />
-                        );
-                      }
+                      return (
+                        <Image
+                          src={"/assets/playing-card-back.png"}
+                          alt="Face-down card"
+                          width={70}
+                          height={100}
+                          className="rounded shadow-md"
+                          data-ai-hint="card back"
+                        />
+                      );
                     })}
                   </div>
                   {/* Bottom row */}
                   <div className="flex gap-2 justify-center">
                     {(player.hand.bottom || []).map((card) => {
-                      if (showBottomRow || showHandFaceUp) {
+                      if (showBottomRow) {
                         return (
                           <Image
                             src={getCardImageSrc(card)}
@@ -157,19 +143,17 @@ export function GameBoard({ playerId, room, onPeekDone, onReplaceCard, onDiscard
   const currentRound = Math.max(0, ...room.players.map((p: Player) => p.scoresByRound.length));
   // All state comes from props; no local state needed for multiplayer
   const { toast } = useToast();
-  const [bottomRowPeeked, setBottomRowPeeked] = useState<boolean>(false);
   const [drawnPile, setDrawnPile] = useState<'deck' | 'discard' | null>(null);
 
   // Main gameplay logic
   const player = room.players.find((p: Player) => p.id === playerId);
+  console.log("player", player);
   const isMyTurn = playerId === room.currentTurnPlayerId;
   const peekPhase = room.gameState === 'peeking';
   const currentPlayer = room.players.find((p: Player) => p.id === room.currentTurnPlayerId);
   const canReplaceBottomRow = player?.canReplaceBottom || false;
 
-  const handlePeekDone = () => {
-    setBottomRowPeeked(true);
-
+  const handlePeekDone = () => {;
     onPeekDone();
   };
 
@@ -204,7 +188,7 @@ export function GameBoard({ playerId, room, onPeekDone, onReplaceCard, onDiscard
         )}
       </div>
       {/* Show hands with peek logic only during peek phase */}
-      <PlayerHandsDisplay players={room.players} currentPlayerId={room.currentTurnPlayerId || null} bottomRowPeeked={bottomRowPeeked} peekPhase={peekPhase} onDonePeek={handlePeekDone} />
+      <PlayerHandsDisplay players={room.players} currentPlayerId={playerId} bottomRowPeeked={player ? player.hasPeeked : true} peekPhase={peekPhase} onDonePeek={handlePeekDone} />
       {/* Draw/replace/discard UI for current player after peek phase */}
       {!peekPhase && isMyTurn && !isGameOver(room.gameState) && (
         <div className="flex flex-col items-center gap-4">
@@ -230,14 +214,14 @@ export function GameBoard({ playerId, room, onPeekDone, onReplaceCard, onDiscard
             <span className="font-semibold">Replace a card:</span>
             <div className="flex gap-2">
               {player?.hand.top.map((card: CardType, idx: number) => (
-                <Button key={idx} onClick={() => handleReplaceCard('top', idx, 'deck')}>
+                <Button key={idx} onClick={() => handleReplaceCard('top', idx, drawnPile || 'deck')}>
                   <Image src={getCardImageSrc(card)} alt={card.rank + " of " + card.suit} width={40} height={60} className="inline-block mr-1 align-middle" />
                   {card.rank + " of " + card.suit}
                 </Button>
               ))}
               {/* Bottom row only if canReplaceBottom is true */}
               {canReplaceBottomRow && player?.hand.bottom.map((card: CardType, idx: number) => (
-                <Button key={idx} onClick={() => handleReplaceCard('bottom', idx, 'deck')}>
+                <Button key={idx} onClick={() => handleReplaceCard('bottom', idx, drawnPile || 'deck')}>
                   <Image src={getCardImageSrc(card)} alt={card.rank + " of " + card.suit} width={40} height={60} className="inline-block mr-1 align-middle" />
                   {card.rank + " of " + card.suit}
                 </Button>
@@ -246,6 +230,27 @@ export function GameBoard({ playerId, room, onPeekDone, onReplaceCard, onDiscard
             <Button onClick={handleDiscardCard} variant="outline">Discard</Button>
           </div>
         </div>
+      )}
+      {/* Show discard pile card */}
+      {!peekPhase && room.discard.length > 0 && (
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-xl flex items-center">
+              <Layers className="mr-2 h-6 w-6 text-primary" />
+              Discard Pile
+            </CardTitle>
+            <CardDescription>Top card available for drawing</CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center">
+            <Image 
+              src={getCardImageSrc(room.discard[0])} 
+              alt={room.discard[0].rank + " of " + room.discard[0].suit} 
+              width={70} 
+              height={100} 
+              className="rounded shadow-md" 
+            />
+          </CardContent>
+        </Card>
       )}
       {/* Waiting message for non-active players after peek phase */}
       {!peekPhase && !isMyTurn && !isGameOver(room.gameState) && (

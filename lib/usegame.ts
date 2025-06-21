@@ -67,6 +67,7 @@ export default function useGame(roomId: string) {
       });
   
       socketRef.current.on(ROOM_UPDATE_EVENT, (room: Room) => {
+        console.log("ROOM_UPDATE_EVENT", room);
         setRoom(room);
       });
   
