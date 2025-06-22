@@ -2,8 +2,22 @@ import { Room, Player, Card, Suit, Rank } from "./types";
 import { mongoClientPromise } from "./mongodb";
 import { createShuffled104Deck, PLAYER_HAND_SIZE, shuffleDeck } from "./sixes";
 
-const SUITS: Suit[] = ['hearts', 'diamonds', 'clubs', 'spades'];
-const RANKS: Rank[] = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen", "king", "ace"];
+const SUITS: Suit[] = ["hearts", "diamonds", "clubs", "spades"];
+const RANKS: Rank[] = [
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "10",
+  "jack",
+  "queen",
+  "king",
+  "ace",
+];
 
 const DB_NAME = "chat-db";
 const ROOMS_COLLECTION = "rooms";
@@ -34,14 +48,14 @@ export const createRoom = async (
   id: string,
   maxUsers: number
 ): Promise<Room> => {
-  const room: Room = { 
-    id, 
-    gameState: "waiting_for_players", 
-    players: [], 
-    maxUsers, 
-    deck: createShuffled104Deck(), 
-    discard: [], 
-    currentTurnPlayerId: undefined, 
+  const room: Room = {
+    id,
+    gameState: "waiting_for_players",
+    players: [],
+    maxUsers,
+    deck: createShuffled104Deck(),
+    discard: [],
+    currentTurnPlayerId: undefined,
     stopperId: undefined,
   }; // TODO change to waiting_for_players
 
@@ -57,7 +71,9 @@ export const addPlayerToRoom = async (
   name: string,
   picture: string
 ): Promise<Room | null> => {
+  console.log("addPlayerToRoom", roomId, playerId, name, picture);
   const room = await getRoom(roomId);
+  console.log("addPlayerToRoom room", room);
   if (!room) return null;
   if (room.players.length >= room.maxUsers) return room;
   if (room.players.length === 0) {
@@ -73,16 +89,20 @@ export const addPlayerToRoom = async (
     scoresByRound: [],
     totalScore: 0,
     isStopper: false,
-    hand: { top: room.deck.splice(0, PLAYER_HAND_SIZE), bottom: room.deck.splice(0, PLAYER_HAND_SIZE) },
+    hand: {
+      top: room.deck.splice(0, PLAYER_HAND_SIZE),
+      bottom: room.deck.splice(0, PLAYER_HAND_SIZE),
+    },
     canReplaceBottom: true,
     hasPeeked: false,
     isActive: true,
   };
 
   room.players.push(player);
+  console.log("suppose to add player", player);
 
   await updateRoom(room);
-  
+
   return room;
 };
 
@@ -103,13 +123,13 @@ export const removePlayerFromRoom = async (
   if (room.players.length === 0) {
     console.log(`Room ${id} deleted because it is empty.`);
     await removeRoom(id);
-    
+
     return null;
   } else {
     if (room.currentTurnPlayerId === playerId) {
       room.currentTurnPlayerId = room.players[0].id;
     }
-  
+
     if (room.adminId === playerId) {
       room.adminId = room.players[0].id;
     }
@@ -120,7 +140,11 @@ export const removePlayerFromRoom = async (
   return room;
 };
 
-export const setPlayerActive = async (id: string, playerId: string, isActive: boolean): Promise<Room | null> => {
+export const setPlayerActive = async (
+  id: string,
+  playerId: string,
+  isActive: boolean
+): Promise<Room | null> => {
   const room = await getRoom(id);
 
   if (!room) return null;
@@ -158,7 +182,10 @@ export const isRoomFull = async (id: string): Promise<boolean> => {
   return room.players.length >= room.maxUsers;
 };
 
-export const setAdmin = async (id: string, playerId: string): Promise<Room | null> => {
+export const setAdmin = async (
+  id: string,
+  playerId: string
+): Promise<Room | null> => {
   const room = await getRoom(id);
 
   if (!room) return null;

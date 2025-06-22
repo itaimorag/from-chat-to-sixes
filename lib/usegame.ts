@@ -29,7 +29,7 @@ export default function useGame(roomId: string) {
   const [user, setUser] = useState<UserData>();
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(() => {
     // Initialize from localStorage if available
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       return localStorage.getItem(LOCAL_STORAGE_PLAYER_ID);
     }
     return null;
@@ -68,19 +68,20 @@ export default function useGame(roomId: string) {
     if (!user) {
       return;
     }
+    console.log("window?.location?.origin", window?.location?.origin);
 
     if (window?.location?.origin) {
       const socket: Socket = io(window.location.origin, {
-        query: { 
-          roomId, 
-          name: user.name, 
+        query: {
+          roomId,
+          name: user.name,
           picture: user.picture,
-          playerId: currentPlayerId // Send the player ID if we have it
+          playerId: currentPlayerId, // Send the player ID if we have it
         },
         // auth: { token: localStorage.getItem("jwt_token") } TODO: add token
       });
       socketRef.current = socket;
-  
+
       socketRef.current.on("connect", () => {
         console.log("CONNECTED");
       });
@@ -89,16 +90,16 @@ export default function useGame(roomId: string) {
         console.log("PLAYER_ID_EVENT", playerId);
         setCurrentPlayerId(playerId);
         // Save to localStorage
-        if (typeof window !== 'undefined') {
+        if (typeof window !== "undefined") {
           localStorage.setItem(LOCAL_STORAGE_PLAYER_ID, playerId);
         }
       });
-  
+
       socketRef.current.on(ROOM_UPDATE_EVENT, (room: Room) => {
         console.log("ROOM_UPDATE_EVENT", room);
         setRoom(room);
       });
-  
+
       return () => {
         socketRef.current.disconnect();
       };
@@ -130,7 +131,11 @@ export default function useGame(roomId: string) {
     });
   };
 
-  const sendReplaceCard = (row: 'top' | 'bottom', idx: number, pile: 'deck' | 'discard') => {
+  const sendReplaceCard = (
+    row: "top" | "bottom",
+    idx: number,
+    pile: "deck" | "discard"
+  ) => {
     if (!socketRef.current) return;
     socketRef.current.emit(REPLACE_CARD_EVENT, row, idx, pile);
   };
