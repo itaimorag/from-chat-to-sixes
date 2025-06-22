@@ -81,11 +81,6 @@ export const addPlayerToRoom = async (
 
   room.players.push(player);
 
-  if (room.players.length === room.maxUsers) {
-    room.gameState = 'peeking';
-    room.currentTurnPlayerId = room.players[0].id;
-  }
-
   await updateRoom(room);
   
   return room;
@@ -161,4 +156,19 @@ export const isRoomFull = async (id: string): Promise<boolean> => {
   if (!room) return false;
 
   return room.players.length >= room.maxUsers;
+};
+
+export const setAdmin = async (id: string, playerId: string): Promise<Room | null> => {
+  const room = await getRoom(id);
+
+  if (!room) return null;
+
+  const player = room.players.find((u) => u.id === playerId);
+  if (!player || !player.isActive) return room;
+
+  room.adminId = playerId;
+
+  await updateRoom(room);
+
+  return room;
 };

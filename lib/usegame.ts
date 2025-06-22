@@ -16,6 +16,8 @@ import {
   CALL_STOP_EVENT,
   KICK_PLAYER_EVENT,
   PLAYER_ID_EVENT,
+  START_GAME_EVENT,
+  MAKE_ADMIN_EVENT,
 } from "./eventconst";
 
 export const LOCAL_STORAGE_PLAYER_ID = "playerId";
@@ -158,6 +160,16 @@ export default function useGame(roomId: string) {
     socketRef.current.emit(KICK_PLAYER_EVENT, playerId);
   };
 
+  const sendStartGame = () => {
+    if (!socketRef.current) return;
+    socketRef.current.emit(START_GAME_EVENT);
+  };
+
+  const sendMakeAdmin = (playerId: string) => {
+    if (!socketRef.current) return;
+    socketRef.current.emit(MAKE_ADMIN_EVENT, playerId);
+  };
+
   return {
     messages,
     user,
@@ -175,5 +187,7 @@ export default function useGame(roomId: string) {
     sendNewGame,
     sendPeekDone,
     sendKickPlayer,
+    sendStartGame,
+    sendMakeAdmin,
   };
 }

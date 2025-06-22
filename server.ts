@@ -7,8 +7,8 @@ import { Server } from "socket.io";
 import { mongoClientPromise } from "./lib/mongodb";
 import { initChangeStream } from "./lib/initChangeStream";
 import { verifyToken } from "./lib/verifyToken";
-import { addPlayerToRoom, removePlayerFromRoom, getRoom, removeRoom, createRoom, setPlayerActive } from "./lib/rooms";
-import { callStop, discardCard, newGame, peekDone, replaceCard } from "./lib/sixes";
+import { addPlayerToRoom, removePlayerFromRoom, getRoom, removeRoom, createRoom, setPlayerActive, setAdmin } from "./lib/rooms";
+import { callStop, discardCard, newGame, peekDone, replaceCard, startGame } from "./lib/sixes";
 import { 
   ROOM_UPDATE_EVENT, 
   NEW_CHAT_MESSAGE_EVENT, 
@@ -21,6 +21,8 @@ import {
   PEEK_DONE_EVENT,
   KICK_PLAYER_EVENT,
   PLAYER_ID_EVENT,
+  START_GAME_EVENT,
+  MAKE_ADMIN_EVENT,
 } from "./lib/eventconst";
 import { Player } from './lib/types';
 
@@ -106,6 +108,14 @@ io.on("connection", (socket) => {
 
   socket.on(KICK_PLAYER_EVENT, async (playerId: string) => {
     await removePlayerFromRoom(roomId as string, playerId);
+  });
+
+  socket.on(START_GAME_EVENT, async () => {
+    await startGame(roomId as string);
+  });
+
+  socket.on(MAKE_ADMIN_EVENT, async (playerId: string) => {
+    await setAdmin(roomId as string, playerId);
   });
 
   socket.on("disconnect", async (reason) => {

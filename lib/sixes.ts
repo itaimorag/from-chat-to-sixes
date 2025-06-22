@@ -132,6 +132,17 @@ export const discardCard = async (playerId: string, roomId: string): Promise<voi
     });
 };
 
+export const startGame = async (roomId: string): Promise<void> => {
+  const room = await getRoom(roomId);
+
+  if (!room || room.gameState !== 'waiting_for_players') return;
+
+  room.gameState = 'peeking';
+  room.currentTurnPlayerId = room.players[0].id;
+
+  await updateRoom(room);
+}
+
 const handleGameOver = (room: Room): Room => {
     room.gameState = 'game_over';
     room.currentTurnPlayerId = undefined;
@@ -173,8 +184,8 @@ export const newGame = async (roomId: string): Promise<void> => {
         player.hand = { top: deck.splice(0, PLAYER_HAND_SIZE), bottom: deck.splice(0, PLAYER_HAND_SIZE) };
         player.hasPeeked = false;
     });
-    room.gameState = 'peeking';
-    room.currentTurnPlayerId = room.players[0].id;
+    room.gameState = 'waiting_for_players';
+    room.currentTurnPlayerId = undefined;
     room.stopperId = undefined;
 
     await updateRoom(room);
@@ -191,8 +202,8 @@ export const peekDone = async (playerId: string, roomId: string): Promise<void> 
         player.hasPeeked = true;
 
         if (room.players.every((p: Player) => p.hasPeeked)) {
-        room.gameState = 'playing';
-        room.currentTurnPlayerId = room.players[0].id;
+          room.gameState = 'playing';
+          room.currentTurnPlayerId = room.players[0].id;
         }
 
         await updateRoom(room);

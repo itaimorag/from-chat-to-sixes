@@ -9,3 +9,5 @@ export const NEW_GAME_EVENT = "new_game";
 export const PEEK_DONE_EVENT = "peek_done";
 export const KICK_PLAYER_EVENT = "kick_player";
 export const PLAYER_ID_EVENT = "player_id";
+export const START_GAME_EVENT = "start_game";
+export const MAKE_ADMIN_EVENT = "make_admin";

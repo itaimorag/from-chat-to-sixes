@@ -19,7 +19,7 @@ import axios from "axios";
 export default function ChatRoom() {
   const router = useRouter();
   const { roomid } = router.query;
-  const { user, room, currentPlayerId, setUser, sendNewGame, sendPeekDone, sendReplaceCard, sendDiscardCard, sendCallStop, sendKickPlayer } = useGame(roomid as string);
+  const { user, room, currentPlayerId, setUser, sendNewGame, sendPeekDone, sendReplaceCard, sendDiscardCard, sendCallStop, sendKickPlayer, sendStartGame, sendMakeAdmin } = useGame(roomid as string);
   const [showNameModal, setShowNameModal] = useState(false);
 
   useEffect(() => {
@@ -174,6 +174,8 @@ export default function ChatRoom() {
                       onCallStop={sendCallStop}
                       onNewGame={handleNewGame}
                       onKickPlayer={sendKickPlayer}
+                      onStartGame={sendStartGame}
+                      onMakeAdmin={sendMakeAdmin}
                     />
                   </div>
                 )}

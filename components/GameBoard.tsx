@@ -25,9 +25,10 @@ interface PlayerHandDisplayProps {
   drawnPile?: 'deck' | 'discard' | null;
   adminId?: string;
   onKickPlayer: (playerId: string) => void;
+  onMakeAdmin: (playerId: string) => void;
 }
 
-function PlayerHandsDisplay({ players, currentPlayerId, bottomRowPeeked, gameState, onDonePeek, onReplaceCard, drawnPile, adminId, onKickPlayer }: PlayerHandDisplayProps) {
+function PlayerHandsDisplay({ players, currentPlayerId, bottomRowPeeked, gameState, onDonePeek, onReplaceCard, drawnPile, adminId, onKickPlayer, onMakeAdmin }: PlayerHandDisplayProps) {
   const peekPhase = gameState === 'peeking';
   const gameOver = gameState === 'game_over';
   const isCurrentPlayerAdmin = adminId === currentPlayerId;
@@ -63,6 +64,11 @@ function PlayerHandsDisplay({ players, currentPlayerId, bottomRowPeeked, gameSta
                     <span className={`ml-2 text-xs px-2 py-1 rounded-full ${player.isActive ? 'bg-green-500 text-green-900' : 'bg-red-500 text-red-900'}`}>
                       {player.isActive ? 'Active' : 'Inactive'}
                     </span>
+                    {peekPhase && (
+                      <span className={`ml-2 text-xs px-2 py-1 rounded-full ${player.hasPeeked ? 'bg-green-500 text-green-900' : 'bg-yellow-500 text-yellow-900'}`}>
+                        {player.hasPeeked ? 'Peeked' : 'Waiting'}
+                      </span>
+                    )}
                   </h3>
                   {isCurrentPlayerAdmin && !isCurrentPlayer && onKickPlayer && (
                     <Button 
@@ -72,6 +78,16 @@ function PlayerHandsDisplay({ players, currentPlayerId, bottomRowPeeked, gameSta
                       className="text-xs"
                     >
                       Kick
+                    </Button>
+                  )}
+                  {isCurrentPlayerAdmin && !isCurrentPlayer && !isPlayerAdmin && player.isActive && (
+                    <Button 
+                      onClick={() => onMakeAdmin(player.id)} 
+                      variant="outline" 
+                      size="sm"
+                      className="text-xs ml-2"
+                    >
+                      Make Admin
                     </Button>
                   )}
                 </div>
@@ -167,6 +183,8 @@ interface GameBoardProps {
   onCallStop: () => void;
   onNewGame: () => void;
   onKickPlayer: (playerId: string) => void;
+  onStartGame: () => void;
+  onMakeAdmin: (playerId: string) => void;
 }
 
 // Helper to get the correct image path for each card
@@ -179,7 +197,7 @@ function isGameOver(phase: GameState) {
   return phase === 'game_over';
 }
 
-export function GameBoard({ playerId, room, onPeekDone, onReplaceCard, onDiscardCard, onCallStop, onNewGame, onKickPlayer }: GameBoardProps) {
+export function GameBoard({ playerId, room, onPeekDone, onReplaceCard, onDiscardCard, onCallStop, onNewGame, onKickPlayer, onStartGame, onMakeAdmin }: GameBoardProps) {
   const currentRound = Math.max(0, ...room.players.map((p: Player) => p.scoresByRound.length));
   // All state comes from props; no local state needed for multiplayer
   const { toast } = useToast();
@@ -189,9 +207,9 @@ export function GameBoard({ playerId, room, onPeekDone, onReplaceCard, onDiscard
   const player = room.players.find((p: Player) => p.id === playerId);
   console.log("player", player);
   const isMyTurn = playerId === room.currentTurnPlayerId;
+  const isCurrentPlayerAdmin = room.adminId === playerId;
   const peekPhase = room.gameState === 'peeking';
   const currentPlayer = room.players.find((p: Player) => p.id === room.currentTurnPlayerId);
-  const canReplaceBottomRow = player?.canReplaceBottom || false;
 
   const handlePeekDone = () => {;
     onPeekDone();
@@ -219,16 +237,37 @@ export function GameBoard({ playerId, room, onPeekDone, onReplaceCard, onDiscard
 
   return (
     <div className="space-y-8">
+      {isCurrentPlayerAdmin && room.gameState === 'waiting_for_players' && room.players.length > 1 && (
+        <div className="text-center p-4 bg-green-100 border border-green-200 rounded-lg">
+          <p className="text-green-800 mb-2">There are enough players to start the game.</p>
+          <Button onClick={onStartGame} size="lg">Start Game</Button>
+        </div>
+      )}
+
       {/* Show turn indicator */}
       <div className="text-center mb-4">
-        {peekPhase ? (
-          <span className="text-lg font-semibold text-primary">{currentPlayer?.name}'s turn to peek at their bottom row</span>
+        {room.gameState === 'waiting_for_players' ? (
+          <span className="text-lg font-semibold text-gray-500">Waiting for players... (Need at least 2)</span>
+        ) : peekPhase ? (
+          <div className="space-y-2">
+            <span className="text-lg font-semibold text-primary">Peeking Phase</span>
+            <div className="flex flex-wrap justify-center gap-4">
+              {room.players.map(player => (
+                <div key={player.id} className="flex items-center gap-2">
+                  <span className="text-sm font-medium">{player.name}:</span>
+                  <span className={`text-xs px-2 py-1 rounded-full ${player.hasPeeked ? 'bg-green-500 text-green-900' : 'bg-yellow-500 text-yellow-900'}`}>
+                    {player.hasPeeked ? 'Peeked' : 'Waiting'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         ) : (
           <span className="text-lg font-semibold text-primary">Current turn: {currentPlayer?.name}</span>
         )}
       </div>
       {/* Show hands with peek logic only during peek phase */}
-      <PlayerHandsDisplay players={room.players} currentPlayerId={playerId} bottomRowPeeked={player ? player.hasPeeked : true} gameState={room.gameState} onDonePeek={handlePeekDone} onReplaceCard={handleReplaceCard} drawnPile={drawnPile} adminId={room.adminId} onKickPlayer={onKickPlayer} />
+      <PlayerHandsDisplay players={room.players} currentPlayerId={playerId} bottomRowPeeked={player ? player.hasPeeked : true} gameState={room.gameState} onDonePeek={handlePeekDone} onReplaceCard={handleReplaceCard} drawnPile={drawnPile} adminId={room.adminId} onKickPlayer={onKickPlayer} onMakeAdmin={onMakeAdmin} />
       {/* Draw/replace/discard UI for current player after peek phase */}
       {!peekPhase && isMyTurn && !isGameOver(room.gameState) && (
         <div className="flex flex-col items-center gap-4">
@@ -338,16 +377,20 @@ export function GameBoard({ playerId, room, onPeekDone, onReplaceCard, onDiscard
                   return winner ? `${winner.name} is the winner with ${winner.scoresByRound[winner.scoresByRound.length - 1]} points!` : 'Scores are final!';
                 })()}
               </p>
-              <Button onClick={onNewGame} size="lg" variant="secondary" className="text-lg">
-                <RotateCcw className="mr-2 h-5 w-5" /> Start New Game
-              </Button>
+              {isCurrentPlayerAdmin && (
+                <Button onClick={onNewGame} size="lg" variant="secondary" className="text-lg">
+                  <RotateCcw className="mr-2 h-5 w-5" /> Start New Game
+                </Button>
+              )}
             </CardContent>
           </Card>
         </div>
       )}
-      <Button onClick={onNewGame} variant="outline" className="mt-8">
-        <RotateCcw className="mr-2 h-5 w-5" /> Start New Game
-      </Button>
+      {isCurrentPlayerAdmin && (
+        <Button onClick={onNewGame} variant="outline" className="mt-8">
+          <RotateCcw className="mr-2 h-5 w-5" /> Start New Game
+        </Button>
+      )}
     </div>
   );
 }
