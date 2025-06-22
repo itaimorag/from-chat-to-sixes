@@ -8,8 +8,8 @@
       "@/hooks/*": ["hooks/*"],
       "@/ai/*": ["ai/*"]
     },
-
-    "target": "es6",
+    "outDir": "./dist",
+    "target": "es2015",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
@@ -22,9 +22,14 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
-    "incremental": true,
-    "outDir": "dist"
+    "incremental": true
   },
-  "include": ["server.ts", "lib/**/*.ts", "next-env.d.ts", "**/*.ts", "**/*.tsx"],
+  "include": [
+    "server.ts",
+    "lib/**/*.ts",
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx"
+  ],
   "exclude": ["node_modules"]
 }

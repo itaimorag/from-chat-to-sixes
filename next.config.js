@@ -15,7 +15,6 @@ const nextConfig = {
       },
     ],
   },
-  output: "standalone",
   webpack: (config, { isServer }) => {
     if (!isServer) {
       // Don't resolve 'fs' module on the client to prevent this being included on the client
