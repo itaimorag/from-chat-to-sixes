@@ -1,9 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useState, useRef, FormEvent } from "react";
 import { useRouter } from "next/router";
-import useChat from "@/lib/usechat";
 import useGame from "@/lib/usegame";
-import useTyping from "@/lib/usetyping";
 import UserAvatar from "@/components/useravatar";
 import Layout from "@/components/layout";
 import styles from "@/styles/chatroom.module.css";
@@ -19,7 +17,20 @@ import axios from "axios";
 export default function ChatRoom() {
   const router = useRouter();
   const { roomid } = router.query;
-  const { user, room, currentPlayerId, setUser, sendNewGame, sendPeekDone, sendReplaceCard, sendDiscardCard, sendCallStop, sendKickPlayer, sendStartGame, sendMakeAdmin } = useGame(roomid as string);
+  const {
+    user,
+    room,
+    currentPlayerId,
+    setUser,
+    sendNewGame,
+    sendPeekDone,
+    sendReplaceCard,
+    sendDiscardCard,
+    sendCallStop,
+    sendKickPlayer,
+    sendStartGame,
+    sendMakeAdmin,
+  } = useGame(roomid as string);
   const [showNameModal, setShowNameModal] = useState(false);
 
   useEffect(() => {
@@ -34,17 +45,22 @@ export default function ChatRoom() {
           router.replace("/");
           alert("Room does not exist");
         } else {
-          const player = result.players.find((p: Player) => p.id === currentPlayerId)
+          const player = result.players.find(
+            (p: Player) => p.id === currentPlayerId
+          );
 
-          if (player) { // Connecting to an existing player
-            setUser({ 
+          if (player) {
+            // Connecting to an existing player
+            setUser({
               name: player.name,
               picture: player.picture,
-            })
-          } else if (result.players.length >= result.maxUsers) { // Room is full
+            });
+          } else if (result.players.length >= result.maxUsers) {
+            // Room is full
             router.replace("/");
             alert("Room is full");
-          } else { // New player
+          } else {
+            // New player
             setShowNameModal(true);
           }
         }
@@ -108,7 +124,9 @@ export default function ChatRoom() {
         <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/2 overflow-y-auto">
           <div className="page-header flex items-center justify-between bg-gradient-to-r from-blue-600 via-blue-500 to-blue-400 text-white px-6 py-4 rounded-xl shadow-md mb-6">
             <div className="flex items-center gap-4">
-              <h1 className="text-2xl font-bold tracking-wide">Room: {roomid}</h1>
+              <h1 className="text-2xl font-bold tracking-wide">
+                Room: {roomid}
+              </h1>
             </div>
             {user && (
               <div className="flex items-center gap-3">
@@ -151,7 +169,10 @@ export default function ChatRoom() {
                       <div className="flex items-center justify-between text-sm mt-1">
                         <span className="text-muted-foreground">You are:</span>
                         <span className="font-semibold text-primary">
-                          {room.players.find((p) => p.id === currentPlayerId)?.name}
+                          {
+                            room.players.find((p) => p.id === currentPlayerId)
+                              ?.name
+                          }
                         </span>
                       </div>
                     )}
@@ -163,22 +184,25 @@ export default function ChatRoom() {
             {/* Main content with enhanced animations */}
             <main className="w-full max-w-4xl">
               <div className="transition-all duration-500 ease-in-out">
-                {room && room.gameState && room.players.length > 0 && currentPlayerId && (
-                  <div className="animate-in slide-in-from-bottom-4 duration-500">
-                    <GameBoard
-                      playerId={currentPlayerId}
-                      room={room}
-                      onPeekDone={sendPeekDone}
-                      onReplaceCard={sendReplaceCard}
-                      onDiscardCard={sendDiscardCard}
-                      onCallStop={sendCallStop}
-                      onNewGame={handleNewGame}
-                      onKickPlayer={sendKickPlayer}
-                      onStartGame={sendStartGame}
-                      onMakeAdmin={sendMakeAdmin}
-                    />
-                  </div>
-                )}
+                {room &&
+                  room.gameState &&
+                  room.players.length > 0 &&
+                  currentPlayerId && (
+                    <div className="animate-in slide-in-from-bottom-4 duration-500">
+                      <GameBoard
+                        playerId={currentPlayerId}
+                        room={room}
+                        onPeekDone={sendPeekDone}
+                        onReplaceCard={sendReplaceCard}
+                        onDiscardCard={sendDiscardCard}
+                        onCallStop={sendCallStop}
+                        onNewGame={handleNewGame}
+                        onKickPlayer={sendKickPlayer}
+                        onStartGame={sendStartGame}
+                        onMakeAdmin={sendMakeAdmin}
+                      />
+                    </div>
+                  )}
               </div>
             </main>
 

@@ -45,7 +45,7 @@ export interface Message {
 
 export type Suit = "hearts" | "diamonds" | "clubs" | "spades";
 export type Rank =
-   "ace"
+  | "ace"
   | "2"
   | "3"
   | "4"
@@ -87,7 +87,6 @@ export type GameState =
 export interface StopAdvisorDialogFormState {
   myEstimatedScore?: number; // Optional, can be pre-filled
 }
-
 // This type was previously AIAdviceDialogInput and included deck/discard counts.
 // Those are now managed in GameBoard and passed as props to StopAdvisorDialog.
 // Retaining a similar structure for what the dialog itself manages internally for its form.
