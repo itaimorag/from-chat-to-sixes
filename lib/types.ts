@@ -12,8 +12,14 @@ export interface User {
 
 export interface Room {
   id: string;
-  users: User[];
+  players: Player[];
+  gameState: GameState;
   maxUsers: number;
+  deck: Card[];
+  discard: Card[];
+  currentTurnPlayerId?: string;
+  adminId?: string;
+  stopperId?: string;
 }
 
 export interface TypingInfo {
@@ -36,3 +42,53 @@ export interface Message {
   sentAt: number;
   ownedByCurrentUser?: boolean;
 }
+
+export type Suit = "hearts" | "diamonds" | "clubs" | "spades";
+export type Rank =
+   "ace"
+  | "2"
+  | "3"
+  | "4"
+  | "5"
+  | "6"
+  | "7"
+  | "8"
+  | "9"
+  | "10"
+  | "jack"
+  | "queen"
+  | "king";
+
+export interface Card {
+  suit: Suit;
+  rank: Rank;
+}
+
+export interface Player {
+  id: string;
+  name: string;
+  picture: string;
+  isActive: boolean;
+  scoresByRound: number[];
+  totalScore: number;
+  canReplaceBottom: boolean;
+  hasPeeked: boolean;
+  hand: { top: Card[]; bottom: Card[] }; // Player's current hand of cards
+}
+
+export type GameState =
+  | "waiting_for_players"
+  | "peeking"
+  | "playing"
+  | "final_round"
+  | "game_over";
+
+// State for the form within the StopAdvisorDialog
+export interface StopAdvisorDialogFormState {
+  myEstimatedScore?: number; // Optional, can be pre-filled
+}
+
+// This type was previously AIAdviceDialogInput and included deck/discard counts.
+// Those are now managed in GameBoard and passed as props to StopAdvisorDialog.
+// Retaining a similar structure for what the dialog itself manages internally for its form.
+export type AIAdviceDialogInput = StopAdvisorDialogFormState;
