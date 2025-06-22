@@ -7,3 +7,5 @@ export const DISCARD_CARD_EVENT = "discard_card";
 export const CALL_STOP_EVENT = "call_stop";
 export const NEW_GAME_EVENT = "new_game";
 export const PEEK_DONE_EVENT = "peek_done";
+export const KICK_PLAYER_EVENT = "kick_player";
+export const PLAYER_ID_EVENT = "player_id";

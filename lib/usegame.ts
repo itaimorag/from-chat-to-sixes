@@ -14,17 +14,31 @@ import {
   REPLACE_CARD_EVENT,
   DISCARD_CARD_EVENT,
   CALL_STOP_EVENT,
+  KICK_PLAYER_EVENT,
+  PLAYER_ID_EVENT,
 } from "./eventconst";
+
+export const LOCAL_STORAGE_PLAYER_ID = "playerId";
 
 export default function useGame(roomId: string) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [room, setRoom] = useState<Room>();
   const [typingUsers, setTypingUsers] = useState<any[]>([]);
   const [user, setUser] = useState<UserData>();
-  const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
+  const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(() => {
+    // Initialize from localStorage if available
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(LOCAL_STORAGE_PLAYER_ID);
+    }
+    return null;
+  });
   const socketRef = useRef<any>();
 
   useEffect(() => {
+    if (!roomId) {
+      return;
+    }
+
     const fetchRoom = async () => {
       const response = await axios.get(`/api/rooms/${roomId}`);
 
@@ -55,15 +69,27 @@ export default function useGame(roomId: string) {
 
     if (window?.location?.origin) {
       const socket: Socket = io(window.location.origin, {
-        query: { roomId, name: user.name, picture: user.picture },
+        query: { 
+          roomId, 
+          name: user.name, 
+          picture: user.picture,
+          playerId: currentPlayerId // Send the player ID if we have it
+        },
         // auth: { token: localStorage.getItem("jwt_token") } TODO: add token
       });
       socketRef.current = socket;
   
       socketRef.current.on("connect", () => {
-        const id = socketRef.current.id;
-  
-        setCurrentPlayerId(id);
+        console.log("CONNECTED");
+      });
+
+      socketRef.current.on(PLAYER_ID_EVENT, (playerId: string) => {
+        console.log("PLAYER_ID_EVENT", playerId);
+        setCurrentPlayerId(playerId);
+        // Save to localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(LOCAL_STORAGE_PLAYER_ID, playerId);
+        }
       });
   
       socketRef.current.on(ROOM_UPDATE_EVENT, (room: Room) => {
@@ -127,6 +153,11 @@ export default function useGame(roomId: string) {
     socketRef.current.emit(NEW_GAME_EVENT);
   };
 
+  const sendKickPlayer = (playerId: string) => {
+    if (!socketRef.current) return;
+    socketRef.current.emit(KICK_PLAYER_EVENT, playerId);
+  };
+
   return {
     messages,
     user,
@@ -143,5 +174,6 @@ export default function useGame(roomId: string) {
     sendCallStop,
     sendNewGame,
     sendPeekDone,
+    sendKickPlayer,
   };
 }

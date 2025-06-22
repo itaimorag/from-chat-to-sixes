@@ -1,6 +1,7 @@
 import { Room, Player, Card, Suit, Rank } from "./types";
 import { getRoom, updateRoom } from "./rooms";
 
+export const PLAYER_HAND_SIZE = 3;
 const SUITS: Suit[] = ['hearts', 'diamonds', 'clubs', 'spades'];
 const RANKS: Rank[] = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen", "king", "ace"];
 
@@ -55,7 +56,7 @@ const calculateSixesHandScore = (hand: { top: Card[]; bottom: Card[] }): number 
 };
 
 // Shuffles a deck of cards
-const shuffleDeck = (deck: Card[]): Card[] => {
+export const shuffleDeck = (deck: Card[]): Card[] => {
   const shuffled = [...deck];
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -169,7 +170,7 @@ export const newGame = async (roomId: string): Promise<void> => {
     room.deck = deck;
     room.discard = [];
     room.players.forEach((player: Player) => {
-        player.hand = { top: deck.splice(0, 3), bottom: deck.splice(0, 3) };
+        player.hand = { top: deck.splice(0, PLAYER_HAND_SIZE), bottom: deck.splice(0, PLAYER_HAND_SIZE) };
         player.hasPeeked = false;
     });
     room.gameState = 'peeking';

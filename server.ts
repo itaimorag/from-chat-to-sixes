@@ -7,7 +7,7 @@ import { Server } from "socket.io";
 import { mongoClientPromise } from "./lib/mongodb";
 import { initChangeStream } from "./lib/initChangeStream";
 import { verifyToken } from "./lib/verifyToken";
-import { addPlayerToRoom, removePlayerFromRoom, getRoom, removeRoom, createRoom } from "./lib/rooms";
+import { addPlayerToRoom, removePlayerFromRoom, getRoom, removeRoom, createRoom, setPlayerActive } from "./lib/rooms";
 import { callStop, discardCard, newGame, peekDone, replaceCard } from "./lib/sixes";
 import { 
   ROOM_UPDATE_EVENT, 
@@ -19,7 +19,10 @@ import {
   CALL_STOP_EVENT, 
   NEW_GAME_EVENT, 
   PEEK_DONE_EVENT,
+  KICK_PLAYER_EVENT,
+  PLAYER_ID_EVENT,
 } from "./lib/eventconst";
+import { Player } from './lib/types';
 
 const PORT = 3000;
 const dev = process.env.NODE_ENV !== "production";
@@ -52,6 +55,12 @@ const io = new Server(httpServer, {
 io.on("connection", (socket) => {
   const { roomId, name, picture } = socket.handshake.query; // TODO Receive in the actual join_room event
 
+  let playerId = socket.handshake.query.playerId as string;
+
+  if (!playerId) {
+    playerId = crypto.randomUUID();
+  }
+
   console.log(`${name} connected`);
 
   // Here you can check if the user has access to the room
@@ -64,19 +73,27 @@ io.on("connection", (socket) => {
       room = await createRoom(roomId as string, 4); // TODO change maxUsers
     }
   
-    await addPlayerToRoom(roomId as string, socket.id, name as string, picture as string);
+    const player = room.players.find((p: Player) => p.id === playerId);
+
+    if (player) {
+      await setPlayerActive(roomId as string, playerId, true);
+    } else {
+      playerId = crypto.randomUUID();
+      await addPlayerToRoom(roomId as string, playerId, name as string, picture as string);
+      socket.emit(PLAYER_ID_EVENT, playerId);
+    }
   })();
 
   socket.on(REPLACE_CARD_EVENT, async (row: 'top' | 'bottom', idx: number, pile: 'deck' | 'discard') => {
-    await replaceCard(socket.id, roomId as string, row, idx, pile);
+    await replaceCard(playerId, roomId as string, row, idx, pile);
   });
 
   socket.on(DISCARD_CARD_EVENT, async () => {
-    await discardCard(socket.id, roomId as string);
+    await discardCard(playerId, roomId as string);
   });
 
   socket.on(CALL_STOP_EVENT, async () => {
-    await callStop(socket.id, roomId as string);
+    await callStop(playerId, roomId as string);
   });
 
   socket.on(NEW_GAME_EVENT, async () => {
@@ -84,19 +101,18 @@ io.on("connection", (socket) => {
   });
 
   socket.on(PEEK_DONE_EVENT, async () => {
-    await peekDone(socket.id, roomId as string);
+    await peekDone(playerId, roomId as string);
   });
-  
+
+  socket.on(KICK_PLAYER_EVENT, async (playerId: string) => {
+    await removePlayerFromRoom(roomId as string, playerId);
+  });
+
   socket.on("disconnect", async (reason) => {
     console.log(`${name} disconnected: ${reason}`);
   
     try {
-      await removePlayerFromRoom(roomId as string, socket.id);
-      const room = await getRoom(roomId as string);
-  
-      if (room && room.players.length === 0) {
-        await removeRoom(roomId as string);
-      }
+      await setPlayerActive(roomId as string, playerId, false);
   
       socket.leave(roomId as string);
     } catch (err) {

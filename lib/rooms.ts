@@ -1,6 +1,6 @@
 import { Room, Player, Card, Suit, Rank } from "./types";
 import { mongoClientPromise } from "./mongodb";
-import { createShuffled104Deck } from "./sixes";
+import { createShuffled104Deck, PLAYER_HAND_SIZE, shuffleDeck } from "./sixes";
 
 const SUITS: Suit[] = ['hearts', 'diamonds', 'clubs', 'spades'];
 const RANKS: Rank[] = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen", "king", "ace"];
@@ -60,7 +60,10 @@ export const addPlayerToRoom = async (
   const room = await getRoom(roomId);
   if (!room) return null;
   if (room.players.length >= room.maxUsers) return room;
-  if (room.players.length === 0) room.currentTurnPlayerId = playerId;
+  if (room.players.length === 0) {
+    room.currentTurnPlayerId = playerId;
+    room.adminId = playerId;
+  }
 
   const player = {
     id: playerId,
@@ -70,9 +73,10 @@ export const addPlayerToRoom = async (
     scoresByRound: [],
     totalScore: 0,
     isStopper: false,
-    hand: { top: room.deck.splice(0, 3), bottom: room.deck.splice(0, 3) },
+    hand: { top: room.deck.splice(0, PLAYER_HAND_SIZE), bottom: room.deck.splice(0, PLAYER_HAND_SIZE) },
     canReplaceBottom: true,
     hasPeeked: false,
+    isActive: true,
   };
 
   room.players.push(player);
@@ -95,15 +99,52 @@ export const removePlayerFromRoom = async (
 
   if (!room) return null;
 
-  room.players = room.players.filter((u) => u.id !== playerId);
-  const rooms = await getRoomCollection();
+  const playerIndex = room.players.findIndex((u) => u.id === playerId);
+  const player = room.players.splice(playerIndex, 1)[0];
+
+  // Put the cards back in the deck
+  room.deck.push(...player.hand.top, ...player.hand.bottom);
+
   if (room.players.length === 0) {
     console.log(`Room ${id} deleted because it is empty.`);
     await removeRoom(id);
     
     return null;
   } else {
-    await rooms.updateOne({ id }, { $set: room });
+    if (room.currentTurnPlayerId === playerId) {
+      room.currentTurnPlayerId = room.players[0].id;
+    }
+  
+    if (room.adminId === playerId) {
+      room.adminId = room.players[0].id;
+    }
+
+    await updateRoom(room);
+  }
+
+  return room;
+};
+
+export const setPlayerActive = async (id: string, playerId: string, isActive: boolean): Promise<Room | null> => {
+  const room = await getRoom(id);
+
+  if (!room) return null;
+
+  const player = room.players.find((u) => u.id === playerId);
+  if (!player) return room;
+  player.isActive = isActive;
+
+  if (!isActive && room.adminId === playerId) {
+    room.adminId = room.players.find((u) => u.isActive)?.id;
+  }
+
+  if (!room.adminId) {
+    console.log(`Room ${id} deleted because it is empty.`);
+    await removeRoom(id);
+
+    return null;
+  } else {
+    await updateRoom(room);
   }
 
   return room;

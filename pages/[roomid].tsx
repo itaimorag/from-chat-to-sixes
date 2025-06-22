@@ -16,13 +16,11 @@ import { Badge } from "@/components/ui/badge";
 import { Users, Gamepad2, Trophy, Settings } from "lucide-react";
 import axios from "axios";
 
-const LOCAL_STORAGE_CURRENT_PLAYER_ID = "sixes_currentPlayerId";
-
 export default function ChatRoom() {
   const router = useRouter();
   const { roomid } = router.query;
-  const { user, room, currentPlayerId, setUser, sendNewGame, sendPeekDone, sendReplaceCard, sendDiscardCard, sendCallStop } = useGame(roomid as string);
-  const [showNameModal, setShowNameModal] = useState(true);
+  const { user, room, currentPlayerId, setUser, sendNewGame, sendPeekDone, sendReplaceCard, sendDiscardCard, sendCallStop, sendKickPlayer } = useGame(roomid as string);
+  const [showNameModal, setShowNameModal] = useState(false);
 
   useEffect(() => {
     if (!roomid) return;
@@ -31,13 +29,24 @@ export default function ChatRoom() {
         const response = await axios.get(`/api/rooms/${roomid}`);
         const result = response.data;
         console.log("result", result);
+
         if (!result) {
           router.replace("/");
           alert("Room does not exist");
-        }
-        if (result.players.length >= result.maxUsers) {
-          router.replace("/");
-          alert("Room is full");
+        } else {
+          const player = result.players.find((p: Player) => p.id === currentPlayerId)
+
+          if (player) { // Connecting to an existing player
+            setUser({ 
+              name: player.name,
+              picture: player.picture,
+            })
+          } else if (result.players.length >= result.maxUsers) { // Room is full
+            router.replace("/");
+            alert("Room is full");
+          } else { // New player
+            setShowNameModal(true);
+          }
         }
       } catch (err) {
         // Optionally handle error (e.g., room doesn't exist)
@@ -164,6 +173,7 @@ export default function ChatRoom() {
                       onDiscardCard={sendDiscardCard}
                       onCallStop={sendCallStop}
                       onNewGame={handleNewGame}
+                      onKickPlayer={sendKickPlayer}
                     />
                   </div>
                 )}

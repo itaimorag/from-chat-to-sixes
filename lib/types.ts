@@ -18,6 +18,7 @@ export interface Room {
   deck: Card[];
   discard: Card[];
   currentTurnPlayerId?: string;
+  adminId?: string;
   stopperId?: string;
 }
 
@@ -67,6 +68,7 @@ export interface Player {
   id: string;
   name: string;
   picture: string;
+  isActive: boolean;
   scoresByRound: number[];
   totalScore: number;
   canReplaceBottom: boolean;
