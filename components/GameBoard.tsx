@@ -21,9 +21,11 @@ interface PlayerHandDisplayProps {
   bottomRowPeeked: boolean;
   peekPhase: boolean;
   onDonePeek: () => void;
+  onReplaceCard?: (row: 'top' | 'bottom', idx: number, pile: 'deck' | 'discard') => void;
+  drawnPile?: 'deck' | 'discard' | null;
 }
 
-function PlayerHandsDisplay({ players, currentPlayerId, bottomRowPeeked, peekPhase, onDonePeek }: PlayerHandDisplayProps) {
+function PlayerHandsDisplay({ players, currentPlayerId, bottomRowPeeked, peekPhase, onDonePeek, onReplaceCard, drawnPile }: PlayerHandDisplayProps) {
   return (
     <Card className="shadow-lg">
       <CardHeader>
@@ -40,51 +42,65 @@ function PlayerHandsDisplay({ players, currentPlayerId, bottomRowPeeked, peekPha
             // Show bottom row face up only for the current player during their peek, and only if they haven't clicked Done
             const showBottomRow = peekPhase && isCurrentPlayer && !bottomRowPeeked;
             console.log("showBottomRow", showBottomRow, peekPhase, isCurrentPlayer, bottomRowPeeked);
+            // Enable clicking for replacement if it's the current player's turn and they've drawn a card
+            const canClickForReplacement = isCurrentPlayer && !peekPhase && drawnPile !== null;
+            
             return (
               <div key={player.id} className="p-4 border rounded-lg bg-card/50">
                 <h3 className="text-lg font-semibold text-primary mb-2">{player.name}'s Hand {isCurrentPlayer ? "(Your Hand)" : ""}</h3>
                 <div className="flex flex-col gap-2">
                   {/* Top row */}
                   <div className="flex gap-2 justify-center">
-                    {(player.hand.top || []).map((card) => {
-                      return (
-                        <Image
-                          src={"/assets/playing-card-back.png"}
-                          alt="Face-down card"
-                          width={70}
-                          height={100}
-                          className="rounded shadow-md"
-                          data-ai-hint="card back"
-                        />
-                      );
+                    {(player.hand.top || []).map((card, idx) => {
+                        return (
+                          <div 
+                            key={idx}
+                            className={`cursor-pointer transition-transform hover:scale-105 ${canClickForReplacement ? 'hover:ring-2 hover:ring-primary' : ''}`}
+                            onClick={canClickForReplacement ? () => onReplaceCard?.('top', idx, drawnPile!) : undefined}
+                          >
+                            <Image
+                              key={idx}
+                              src={"/assets/playing-card-back.png"}
+                              alt="Face-down card"
+                              width={70}
+                              height={100}
+                              className="rounded shadow-md"
+                              data-ai-hint="card back"
+                            />
+                          </div>
+                        );
                     })}
                   </div>
                   {/* Bottom row */}
                   <div className="flex gap-2 justify-center">
-                    {(player.hand.bottom || []).map((card) => {
-                      if (showBottomRow) {
-                        return (
-                          <Image
-                            src={getCardImageSrc(card)}
-                            alt={card.rank + " of " + card.suit}
-                            width={70}
-                            height={100}
-                            className="rounded shadow-md"
-                            data-ai-hint={card.rank + " " + card.suit}
-                          />
-                        );
-                      } else {
-                        return (
-                          <Image
-                            src={"/assets/playing-card-back.png"}
-                            alt="Face-down card"
-                            width={70}
-                            height={100}
-                            className="rounded shadow-md"
-                            data-ai-hint="card back"
-                          />
-                        );
-                      }
+                    {(player.hand.bottom || []).map((card, idx) => {
+                      return (
+                        <div 
+                          key={idx}
+                          className={`cursor-pointer transition-transform hover:scale-105 ${canClickForReplacement ? 'hover:ring-2 hover:ring-primary' : ''}`}
+                          onClick={canClickForReplacement ? () => onReplaceCard?.('bottom', idx, drawnPile!) : undefined}
+                        >
+                          {showBottomRow ? (
+                            <Image
+                              src={getCardImageSrc(card)}
+                              alt={card.rank + " of " + card.suit}
+                              width={70}
+                              height={100}
+                              className="rounded shadow-md"
+                              data-ai-hint={card.rank + " " + card.suit}
+                            />
+                          ) : (
+                            <Image
+                              src={"/assets/playing-card-back.png"}
+                              alt="Face-down card"
+                              width={70}
+                              height={100}
+                              className="rounded shadow-md"
+                              data-ai-hint="card back"
+                            />
+                          )}
+                        </div>
+                      );
                     })}
                   </div>
                   {/* Show Done button for local player during peek phase, only if it's their turn */}
@@ -188,47 +204,29 @@ export function GameBoard({ playerId, room, onPeekDone, onReplaceCard, onDiscard
         )}
       </div>
       {/* Show hands with peek logic only during peek phase */}
-      <PlayerHandsDisplay players={room.players} currentPlayerId={playerId} bottomRowPeeked={player ? player.hasPeeked : true} peekPhase={peekPhase} onDonePeek={handlePeekDone} />
+      <PlayerHandsDisplay players={room.players} currentPlayerId={playerId} bottomRowPeeked={player ? player.hasPeeked : true} peekPhase={peekPhase} onDonePeek={handlePeekDone} onReplaceCard={handleReplaceCard} drawnPile={drawnPile} />
       {/* Draw/replace/discard UI for current player after peek phase */}
       {!peekPhase && isMyTurn && !isGameOver(room.gameState) && (
         <div className="flex flex-col items-center gap-4">
-          <div className="flex gap-4">
-            <Button onClick={handleDrawFromDeck} disabled={room.deck.length === 0}>Draw from Deck</Button>
-            <Button onClick={handleDrawFromDiscard} disabled={room.discard.length === 0}>Draw from Discard</Button>
-          </div>
-        </div>
-      )}
-      {/* Show drawn card and allow replace/discard */}
-      {!peekPhase && isMyTurn && !isGameOver(room.gameState) && (
-        <div className="flex flex-col items-center gap-4">
-          <div className="flex flex-col items-center">
-            <span className="mb-2 font-semibold">You drew:</span>
-            {drawnPile && (
-              <Image src={getCardImageSrc(drawnPile === 'deck' ? room.deck[0] : room.discard[0])} alt={drawnPile === 'deck' ? room.deck[0].rank + " of " + room.deck[0].suit : room.discard[0].rank + " of " + room.discard[0].suit} width={70} height={100} className="rounded shadow-md" />
-            )}
-            {!drawnPile && (
-              <span className="text-muted-foreground">No card drawn</span>
-            )}
-          </div>
-          <div className="flex flex-col gap-2">
-            <span className="font-semibold">Replace a card:</span>
-            <div className="flex gap-2">
-              {player?.hand.top.map((card: CardType, idx: number) => (
-                <Button key={idx} onClick={() => handleReplaceCard('top', idx, drawnPile || 'deck')}>
-                  <Image src={getCardImageSrc(card)} alt={card.rank + " of " + card.suit} width={40} height={60} className="inline-block mr-1 align-middle" />
-                  {card.rank + " of " + card.suit}
-                </Button>
-              ))}
-              {/* Bottom row only if canReplaceBottom is true */}
-              {canReplaceBottomRow && player?.hand.bottom.map((card: CardType, idx: number) => (
-                <Button key={idx} onClick={() => handleReplaceCard('bottom', idx, drawnPile || 'deck')}>
-                  <Image src={getCardImageSrc(card)} alt={card.rank + " of " + card.suit} width={40} height={60} className="inline-block mr-1 align-middle" />
-                  {card.rank + " of " + card.suit}
-                </Button>
-              ))}
+          {!drawnPile && (
+            <div className="flex gap-4">
+              <Button onClick={handleDrawFromDeck} disabled={room.deck.length === 0}>Draw from Deck</Button>
+              <Button onClick={handleDrawFromDiscard} disabled={room.discard.length === 0}>Draw from Discard</Button>
             </div>
-            <Button onClick={handleDiscardCard} variant="outline">Discard</Button>
-          </div>
+          )}
+          {/* Show drawn card and allow replace/discard only after drawing */}
+          {drawnPile && (
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex flex-col items-center">
+                <span className="mb-2 font-semibold">You drew:</span>
+                <Image src={getCardImageSrc(drawnPile === 'deck' ? room.deck[0] : room.discard[0])} alt={drawnPile === 'deck' ? room.deck[0].rank + " of " + room.deck[0].suit : room.discard[0].rank + " of " + room.discard[0].suit} width={70} height={100} className="rounded shadow-md" />
+              </div>
+              <div className="flex flex-col gap-2">
+                <span className="font-semibold text-center">Click on a card in your hand to replace it, or discard the drawn card:</span>
+                <Button onClick={handleDiscardCard} variant="outline">Discard Drawn Card</Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
       {/* Show discard pile card */}
