@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "ts-node-dev --ignore-watch .next server.ts",
-    "build": "next build && tsc",
-    "start": "node src/dist/server.js",
+    "build": "next build && tsc -p tsconfig.server.json",
+    "start": "node dist/server.js",
     "lint": "next lint"
   },
   "dependencies": {

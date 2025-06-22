@@ -1,0 +1,16 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.MAKE_ADMIN_EVENT = exports.START_GAME_EVENT = exports.PLAYER_ID_EVENT = exports.KICK_PLAYER_EVENT = exports.PEEK_DONE_EVENT = exports.NEW_GAME_EVENT = exports.CALL_STOP_EVENT = exports.DISCARD_CARD_EVENT = exports.REPLACE_CARD_EVENT = exports.STOP_TYPING_MESSAGE_EVENT = exports.START_TYPING_MESSAGE_EVENT = exports.NEW_CHAT_MESSAGE_EVENT = exports.ROOM_UPDATE_EVENT = void 0;
+exports.ROOM_UPDATE_EVENT = "room_update";
+exports.NEW_CHAT_MESSAGE_EVENT = "new_chat_message";
+exports.START_TYPING_MESSAGE_EVENT = "start_typing_message";
+exports.STOP_TYPING_MESSAGE_EVENT = "stop_typing_message";
+exports.REPLACE_CARD_EVENT = "replace_card";
+exports.DISCARD_CARD_EVENT = "discard_card";
+exports.CALL_STOP_EVENT = "call_stop";
+exports.NEW_GAME_EVENT = "new_game";
+exports.PEEK_DONE_EVENT = "peek_done";
+exports.KICK_PLAYER_EVENT = "kick_player";
+exports.PLAYER_ID_EVENT = "player_id";
+exports.START_GAME_EVENT = "start_game";
+exports.MAKE_ADMIN_EVENT = "make_admin";
