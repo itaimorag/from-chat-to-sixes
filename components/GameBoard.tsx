@@ -19,13 +19,16 @@ interface PlayerHandDisplayProps {
   players: Player[];
   currentPlayerId: string | null;
   bottomRowPeeked: boolean;
-  peekPhase: boolean;
+  gameState: GameState;
   onDonePeek: () => void;
   onReplaceCard?: (row: 'top' | 'bottom', idx: number, pile: 'deck' | 'discard') => void;
   drawnPile?: 'deck' | 'discard' | null;
 }
 
-function PlayerHandsDisplay({ players, currentPlayerId, bottomRowPeeked, peekPhase, onDonePeek, onReplaceCard, drawnPile }: PlayerHandDisplayProps) {
+function PlayerHandsDisplay({ players, currentPlayerId, bottomRowPeeked, gameState, onDonePeek, onReplaceCard, drawnPile }: PlayerHandDisplayProps) {
+  const peekPhase = gameState === 'peeking';
+  const gameOver = gameState === 'game_over';
+
   return (
     <Card className="shadow-lg">
       <CardHeader>
@@ -52,14 +55,23 @@ function PlayerHandsDisplay({ players, currentPlayerId, bottomRowPeeked, peekPha
                   {/* Top row */}
                   <div className="flex gap-2 justify-center">
                     {(player.hand.top || []).map((card, idx) => {
-                        return (
-                          <div 
-                            key={idx}
-                            className={`cursor-pointer transition-transform hover:scale-105 ${canClickForReplacement ? 'hover:ring-2 hover:ring-primary' : ''}`}
-                            onClick={canClickForReplacement ? () => onReplaceCard?.('top', idx, drawnPile!) : undefined}
-                          >
+                      return (
+                        <div 
+                          key={idx}
+                          className={`cursor-pointer transition-transform hover:scale-105 ${canClickForReplacement ? 'hover:ring-2 hover:ring-primary' : ''}`}
+                          onClick={canClickForReplacement ? () => onReplaceCard?.('top', idx, drawnPile!) : undefined}
+                        >
+                          {gameOver ? (
                             <Image
-                              key={idx}
+                              src={getCardImageSrc(card)}
+                              alt={card.rank + " of " + card.suit}
+                              width={70}
+                              height={100}
+                              className="rounded shadow-md"
+                              data-ai-hint={card.rank + " " + card.suit}
+                            />
+                          ) : (
+                            <Image
                               src={"/assets/playing-card-back.png"}
                               alt="Face-down card"
                               width={70}
@@ -67,20 +79,23 @@ function PlayerHandsDisplay({ players, currentPlayerId, bottomRowPeeked, peekPha
                               className="rounded shadow-md"
                               data-ai-hint="card back"
                             />
-                          </div>
-                        );
+                          )}
+                        </div>
+                      );
                     })}
                   </div>
                   {/* Bottom row */}
                   <div className="flex gap-2 justify-center">
                     {(player.hand.bottom || []).map((card, idx) => {
+                      const canClickBottomForReplacement = canClickForReplacement && player.canReplaceBottom;
+                      
                       return (
                         <div 
                           key={idx}
-                          className={`cursor-pointer transition-transform hover:scale-105 ${canClickForReplacement ? 'hover:ring-2 hover:ring-primary' : ''}`}
-                          onClick={canClickForReplacement ? () => onReplaceCard?.('bottom', idx, drawnPile!) : undefined}
+                          className={`cursor-pointer transition-transform hover:scale-105 ${canClickBottomForReplacement ? 'hover:ring-2 hover:ring-primary' : ''}`}
+                          onClick={canClickBottomForReplacement ? () => onReplaceCard?.('bottom', idx, drawnPile!) : undefined}
                         >
-                          {showBottomRow ? (
+                          {showBottomRow || gameOver ? (
                             <Image
                               src={getCardImageSrc(card)}
                               alt={card.rank + " of " + card.suit}
@@ -114,22 +129,6 @@ function PlayerHandsDisplay({ players, currentPlayerId, bottomRowPeeked, peekPha
             );
           })}
         </div>
-        <Card className="mt-6 bg-primary/10 border-primary/30">
-          <CardHeader>
-            <CardTitle className="text-xl flex items-center"><HelpCircle className="mr-2 h-6 w-6 text-primary" />Next Steps (Multiplayer)</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground space-y-1">
-            <p>Card display is set up for individual player views using placeholder images. You'll need to replace the `imageSrc` in `createStandard52Deck` (or a similar function for a 108-card deck) with actual URLs to your card images.</p>
-            <p>To continue with multiplayer, you'll need to implement backend WebSocket logic for:</p>
-            <ul className="list-disc list-inside pl-4">
-              <li>Managing turns.</li>
-              <li>Handling card drawing (from deck or discard pile).</li>
-              <li>Handling card discarding.</li>
-              <li>Synchronizing these actions across all players.</li>
-            </ul>
-            <p className="mt-2">For now, you can proceed with score entry for rounds.</p>
-          </CardContent>
-        </Card>
       </CardContent>
     </Card>
   );
@@ -204,7 +203,7 @@ export function GameBoard({ playerId, room, onPeekDone, onReplaceCard, onDiscard
         )}
       </div>
       {/* Show hands with peek logic only during peek phase */}
-      <PlayerHandsDisplay players={room.players} currentPlayerId={playerId} bottomRowPeeked={player ? player.hasPeeked : true} peekPhase={peekPhase} onDonePeek={handlePeekDone} onReplaceCard={handleReplaceCard} drawnPile={drawnPile} />
+      <PlayerHandsDisplay players={room.players} currentPlayerId={playerId} bottomRowPeeked={player ? player.hasPeeked : true} gameState={room.gameState} onDonePeek={handlePeekDone} onReplaceCard={handleReplaceCard} drawnPile={drawnPile} />
       {/* Draw/replace/discard UI for current player after peek phase */}
       {!peekPhase && isMyTurn && !isGameOver(room.gameState) && (
         <div className="flex flex-col items-center gap-4">
@@ -223,7 +222,7 @@ export function GameBoard({ playerId, room, onPeekDone, onReplaceCard, onDiscard
               </div>
               <div className="flex flex-col gap-2">
                 <span className="font-semibold text-center">Click on a card in your hand to replace it, or discard the drawn card:</span>
-                <Button onClick={handleDiscardCard} variant="outline">Discard Drawn Card</Button>
+                <Button onClick={handleDiscardCard} variant="outline" disabled={drawnPile === 'discard'}>Discard Drawn Card</Button>
               </div>
             </div>
           )}
@@ -257,13 +256,13 @@ export function GameBoard({ playerId, room, onPeekDone, onReplaceCard, onDiscard
         </div>
       )}
       {/* STOP button for current player */}
-      {!peekPhase && isMyTurn && !isGameOver(room.gameState) && (
+      {isMyTurn && room.gameState === 'playing' && drawnPile === null && (
         <div className="flex justify-center mt-4">
           <Button onClick={onCallStop} variant="destructive">Call STOP</Button>
         </div>
       )}
       {/* Scoreboard and round info */}
-      <Scoreboard players={room.players} currentRound={currentRound} />
+      <Scoreboard players={room.players} currentRound={currentRound} stopperId={room.stopperId ? room.stopperId : null} />
       {room.players.length > 0 && (
         <Card className="shadow-lg">
           <CardHeader>
@@ -300,7 +299,7 @@ export function GameBoard({ playerId, room, onPeekDone, onReplaceCard, onDiscard
       {/* Game over UI */}
       {isGameOver(room.gameState) && (
         <div className="space-y-6">
-          <Scoreboard players={room.players} currentRound={currentRound} />
+          <Scoreboard players={room.players} currentRound={currentRound} stopperId={room.stopperId ? room.stopperId : null} />
           <Card className="text-center shadow-xl bg-gradient-to-r from-primary to-accent text-primary-foreground">
             <CardHeader>
               <CardTitle className="text-4xl flex items-center justify-center">
@@ -311,7 +310,7 @@ export function GameBoard({ playerId, room, onPeekDone, onReplaceCard, onDiscard
               <p className="text-2xl font-semibold">
                 {(() => {
                   const winner = room.players.reduce((prev: Player, curr: Player) => (curr.totalScore < prev.totalScore ? curr : prev), room.players[0]);
-                  return winner ? `${winner.name} is the winner with ${winner.totalScore} points!` : 'Scores are final!';
+                  return winner ? `${winner.name} is the winner with ${winner.scoresByRound[winner.scoresByRound.length - 1]} points!` : 'Scores are final!';
                 })()}
               </p>
               <Button onClick={onNewGame} size="lg" variant="secondary" className="text-lg">

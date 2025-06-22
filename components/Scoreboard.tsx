@@ -25,9 +25,10 @@ import {
 interface ScoreboardProps {
   players: Player[];
   currentRound: number;
+  stopperId: string | null;
 }
 
-export function Scoreboard({ players, currentRound }: ScoreboardProps) {
+export function Scoreboard({ players, currentRound, stopperId }: ScoreboardProps) {
   const sortedPlayers = [...players].sort(
     (a, b) => a.totalScore - b.totalScore
   );
@@ -148,11 +149,13 @@ export function Scoreboard({ players, currentRound }: ScoreboardProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedPlayers.map((player, index) => (
-                  <TableRow
+                {sortedPlayers.map((player, index) => {
+                  const isStopper = player.id === stopperId;
+
+                  return (<TableRow
                     key={player.id}
                     className={`border-primary/10 hover:bg-primary/5 transition-colors duration-200 ${
-                      player.isStopper ? "bg-accent/20 border-accent/30" : ""
+                      isStopper ? "bg-accent/20 border-accent/30" : ""
                     } ${
                       index === 0 ? "bg-yellow-500/10 border-yellow-500/30" : ""
                     }`}
@@ -175,7 +178,7 @@ export function Scoreboard({ players, currentRound }: ScoreboardProps) {
                             <span className="font-semibold text-lg text-primary">
                               {player.name}
                             </span>
-                            {player.isStopper && (
+                            {isStopper && (
                               <Badge variant="destructive" className="text-xs">
                                 STOP
                               </Badge>
@@ -218,7 +221,8 @@ export function Scoreboard({ players, currentRound }: ScoreboardProps) {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                );
+                })}
               </TableBody>
             </Table>
           </div>

@@ -65,73 +65,70 @@ const shuffleDeck = (deck: Card[]): Card[] => {
 }
 
 export const replaceCard = async (playerId: string, roomId: string, row: 'top' | 'bottom', idx: number, pile: 'deck' | 'discard'): Promise<void> => {
-    let room = await getRoom(roomId);
+  makeTurn(playerId, roomId, (room: Room, player: Player) => {
+    const discardedCard = player.hand[row][idx];
 
-    if (!room) return;
-
-    if ((room.gameState === 'playing' || room.gameState === 'final_round') && room.currentTurnPlayerId === playerId) {
-      const player = room.players.find((p: Player) => p.id === playerId);
-      if (!player) return;
-
-      const discardedCard = player.hand[row][idx];
-
-      if (row === 'bottom') {
-        if (!player.canReplaceBottom) return;
-      } else {
-        player.canReplaceBottom = false;
-      }
-
-      if (pile === 'deck') {
-        if (room.deck.length === 0) return;
-
-        player.hand[row][idx] = room.deck.shift() as Card;
-
-        if (room.deck.length === 1) {
-            room.deck = shuffleDeck(room.discard);
-            room.discard = [];
-        }
-      } else {
-        if (room.discard.length === 0) return;
-        player.hand[row][idx] = room.discard.shift() as Card;
-      }
-
-      room.discard.unshift(discardedCard);
-
-      room.currentTurnPlayerId = room.players[(room.players.indexOf(player) + 1) % room.players.length].id;
-
-      if (room.gameState === 'final_round' && room.currentTurnPlayerId === playerId) {
-        room = handleGameOver(room);
-      }
-  
-      await updateRoom(room);
+    if (row === 'bottom') {
+      if (!player.canReplaceBottom) return;
+    } else {
+      player.canReplaceBottom = false;
     }
+
+    if (pile === 'deck') {
+      if (room.deck.length === 0) return;
+
+      player.hand[row][idx] = room.deck.shift() as Card;
+
+      if (room.deck.length === 1) {
+        room.deck = shuffleDeck(room.discard);
+        room.discard = [];
+      }
+    } else {
+      if (room.discard.length === 0) return;
+      player.hand[row][idx] = room.discard.shift() as Card;
+    }
+
+    return discardedCard;
+  });
 };
 
-export const discardCard = async (playerId: string, roomId: string): Promise<void> => {
-    let room = await getRoom(roomId);
+const makeTurn = async (playerId: string, roomId: string, performAction: (room: Room, player: Player) => Card | undefined): Promise<void> => {
+  let room = await getRoom(roomId);
 
-    if (!room) return;
+  if (!room) return;
 
-    if ((room.gameState === 'playing' || room.gameState === 'final_round') && room.currentTurnPlayerId === playerId) {
-        const player = room.players.find((p: Player) => p.id === playerId);
-        if (!player) return;
-        if (room.deck.length === 0) return;
+  if ((room.gameState === 'playing' || room.gameState === 'final_round') && room.currentTurnPlayerId === playerId) {
+    const player = room.players.find((p: Player) => p.id === playerId);
+    if (!player) return;
 
-        room.discard.unshift(room.deck.shift() as Card);
+    const discardedCard = performAction(room, player);
 
-        if (room.deck.length === 1) {
-            room.deck = shuffleDeck(room.discard);
-            room.discard = [];
-        }
-
-        room.currentTurnPlayerId = room.players[(room.players.indexOf(player) + 1) % room.players.length].id;
-
-        if (room.gameState === 'final_round' && room.currentTurnPlayerId === playerId) {
-            room = handleGameOver(room);
-        }
-
-        await updateRoom(room);
+    if (discardedCard) {
+      room.discard.unshift(discardedCard);
     }
+
+    room.currentTurnPlayerId = room.players[(room.players.indexOf(player) + 1) % room.players.length].id;
+
+    if (room.gameState === 'final_round' && room.currentTurnPlayerId === room.stopperId) {
+      room = handleGameOver(room);
+    }
+
+    await updateRoom(room);
+  }
+}
+
+export const discardCard = async (playerId: string, roomId: string): Promise<void> => {
+
+    makeTurn(playerId, roomId, (room: Room, player: Player) => {
+      if (room.deck.length === 0) return;
+  
+      if (room.deck.length === 1) {
+        room.deck = shuffleDeck(room.discard);
+        room.discard = [];
+      }
+
+      return room.deck.shift() as Card;
+    });
 };
 
 const handleGameOver = (room: Room): Room => {
@@ -139,7 +136,9 @@ const handleGameOver = (room: Room): Room => {
     room.currentTurnPlayerId = undefined;
     room.stopperId = undefined;
     room.players.forEach((player: Player) => {
-        player.scoresByRound.push(calculateSixesHandScore(player.hand));
+        const score = calculateSixesHandScore(player.hand);
+        player.scoresByRound.push(score);
+        player.totalScore += score;
     });
 
     return room;
