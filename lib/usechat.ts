@@ -4,8 +4,8 @@ import axios from "axios";
 import { UserData, User, TypingInfo, Message } from "./types";
 
 import {
-  USER_JOIN_CHAT_EVENT,
-  USER_LEAVE_CHAT_EVENT,
+  // USER_JOIN_CHAT_EVENT,
+  // USER_LEAVE_CHAT_EVENT,
   NEW_CHAT_MESSAGE_EVENT,
   START_TYPING_MESSAGE_EVENT,
   STOP_TYPING_MESSAGE_EVENT,
@@ -51,14 +51,14 @@ export default function useChat(roomId: string) {
         console.log(socketRef.current.id);
       });
 
-      socketRef.current.on(USER_JOIN_CHAT_EVENT, (user: User) => {
-        if (user.id === socketRef.current.id) return;
-        setUsers((users) => [...users, user]);
-      });
+      // socketRef.current.on(USER_JOIN_CHAT_EVENT, (user: User) => {
+      //   if (user.id === socketRef.current.id) return;
+      //   setUsers((users) => [...users, user]);
+      // });
 
-      socketRef.current.on(USER_LEAVE_CHAT_EVENT, (user: User) => {
-        setUsers((users) => users.filter((u) => u.id !== user.id));
-      });
+      // socketRef.current.on(USER_LEAVE_CHAT_EVENT, (user: User) => {
+      //   setUsers((users) => users.filter((u) => u.id !== user.id));
+      // });
 
       socketRef.current.on(NEW_CHAT_MESSAGE_EVENT, (message: Message) => {
         const incomingMessage = {
