@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "ts-node-dev --ignore-watch .next server.ts",
     "build": "next build && tsc",
-    "start": "node dist/server.js",
+    "start": "node src/dist/server.js",
     "lint": "next lint"
   },
   "dependencies": {
